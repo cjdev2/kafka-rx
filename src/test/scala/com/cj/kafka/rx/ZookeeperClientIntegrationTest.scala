@@ -1,5 +1,6 @@
 package com.cj.kafka.rx
 
+import com.google.common.base.Charsets
 import com.google.common.primitives.Longs
 import org.apache.curator.framework.{CuratorFrameworkFactory, CuratorFramework}
 import org.apache.curator.test.TestingServer
@@ -54,6 +55,20 @@ class ZookeeperClientIntegrationTest extends FlatSpec with ShouldMatchers with B
 
     zk.setOffsets(offsets)
     zk.getOffsets should be(offsets)
+  }
+
+  it should "encode offsets as strings" in {
+    val zk = new ZookeeperClient("topic", "group", client)
+    val partition = 1
+    val path = ZKHelper.getPartitionPath(zk.offsetPath, partition)
+
+    val offsets = Map[Int, Long](partition -> 42)
+
+    zk.setOffsets(offsets)
+
+    val bytes = client.getData.forPath(path)
+    val str = new String(bytes, Charsets.UTF_8)
+    str should be(offsets(partition).toString)
   }
 
   it should "update existing offsets in zookeeper" in {

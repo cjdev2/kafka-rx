@@ -42,7 +42,7 @@ class ZookeeperClient(topic: String, group: String, zk: CuratorFramework) {
   def setOffsets(offsets: Map[Int, Long]): Map[Int, Long] = {
     offsets foreach { case (partition, offset) =>
       val nodePath = ZKHelper.getPartitionPath(offsetPath, partition)
-      val bytes = java.lang.Long.toString(offset).getBytes(Charsets.UTF_8)
+      val bytes = offset.toString.getBytes(Charsets.UTF_8)
       Option(zk.checkExists.forPath(nodePath)) match {
         case None =>
           zk.create.creatingParentsIfNeeded.forPath(nodePath, bytes)
