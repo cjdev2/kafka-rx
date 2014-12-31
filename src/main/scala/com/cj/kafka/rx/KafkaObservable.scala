@@ -23,7 +23,7 @@ object KafkaObservable {
     val props = new Properties()
     props.put("group.id", group)
     props.put("zookeeper.connect", zookeepers)
-    props.put("auto.offset.reset", "smallest");
+    props.put("auto.offset.reset", "smallest")
     if (! autoCommit) {
       props.put("auto.commit.enable", "false")
     }

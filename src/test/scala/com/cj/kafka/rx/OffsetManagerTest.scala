@@ -80,7 +80,7 @@ class OffsetManagerTest extends FlatSpec with ShouldMatchers {
     partitions should be(Set(messageA.partition, messageB.partition))
   }
 
-  it should "reconcile partition ownership with zookeepers external offsets" in {
+  it should "adjust offsets for committing to zookeeper" in {
     // given an OffsetManager is in a certain state
     val offsetManager = new OffsetManager[String]
     val messageA = Message(value="test message", topic="test-topic", partition=0, offset=5L)
@@ -99,9 +99,13 @@ class OffsetManagerTest extends FlatSpec with ShouldMatchers {
     val filteredOffsets = offsetManager.adjustOffsets(offsetsFromZK)
 
     // then
-    val expectedOffsets = Map(messageB.partition -> messageB.offset)
-    offsetManager.getOffsets should be(expectedOffsets)
-    filteredOffsets should be(expectedOffsets)
+    // offsets need to be incremented for zookeeper:
+    // kafka stored offsets are 'where do I start from' and our manager is 'what did I last process'
+    val expectedManagerOffsets = Map(messageB.partition -> messageB.offset)
+    val expectedAdjustedOffsets = Map(messageB.partition -> (messageB.offset + 1))
+
+    offsetManager.getOffsets should be(expectedManagerOffsets)
+    filteredOffsets should be(expectedAdjustedOffsets)
   }
 
   it should "provide its checkpoint function to all the messages" in {

@@ -59,7 +59,10 @@ class ObservableStreamIntegrationTest extends FlatSpec with ShouldMatchers with 
       }
       val messages = stream.toBlocking.toList
       messages.last.checkpoint()
-      zk.getOffsets should be(messages.last.offsets)
+      val adjustedOffsets = messages.last.offsets map { case (partition, offset) =>
+        partition -> (offset + 1)
+      }
+      zk.getOffsets should be(adjustedOffsets)
     } finally {
       server.close()
       client.close()

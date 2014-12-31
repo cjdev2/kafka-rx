@@ -38,8 +38,10 @@ class OffsetManager[T](
       val internalOffset = internalOffsets(partition)
       internalOffset >= externalOffset
     }
-    internalOffsets.filter { case (partition, offset) =>
+    internalOffsets filter { case (partition, offset) =>
       currentOffsets.contains(partition)
+    } map { case (partition, offset) =>
+      partition -> (offset + 1)
     }
   }
 

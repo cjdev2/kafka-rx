@@ -6,7 +6,6 @@ import org.apache.curator.framework.CuratorFramework
 import org.apache.curator.framework.imps.CuratorFrameworkState
 import org.apache.curator.utils.ZKPaths
 import scala.collection.JavaConversions._
-import scala.concurrent.duration._
 
 import org.apache.curator.framework.recipes.locks.{InterProcessLock, InterProcessMutex}
 
@@ -60,7 +59,7 @@ class ZookeeperClient(topic: String, group: String, zk: CuratorFramework) {
 
   def commit(manager: OffsetManager[Array[Byte]], offsets: Map[Int, Long]): Map[Int, Long] = {
     val lock = getLock
-    val acquired = lock.acquire(1, SECONDS)
+    lock.acquire()
     try {
       val zkOffsets = getOffsets
       val adjustedOffsets = manager.adjustOffsets(zkOffsets, offsets)

@@ -24,7 +24,7 @@ object ObservableStream {
       .map(_.get)
 
     observable.doOnCompleted({ () => zk.close() })
-    observable.doOnError({ err => zk.close() })
+    observable.doOnError({ err =>  zk.close() })
 
     observable
 
