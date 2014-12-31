@@ -26,7 +26,7 @@ case class Message[T](
 }
 
 object Message {
-  def fromKafkaMessage(message: MessageAndMetadata[Array[Byte], Array[Byte]]): Message[Array[Byte]] = {
+  def fromKafka(message: MessageAndMetadata[Array[Byte], Array[Byte]]): Message[Array[Byte]] = {
     Message(value=message.message(), topic=message.topic, partition=message.partition, offset=message.offset)
   }
 }

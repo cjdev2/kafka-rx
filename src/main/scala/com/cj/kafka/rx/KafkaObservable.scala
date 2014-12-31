@@ -10,17 +10,22 @@ import rx.lang.scala.Observable
 
 object KafkaObservable {
 
-  def getByteStream(zookeepers: String, topic: String, client: String): Observable[Message[Array[Byte]]] = {
-    val stream = getKafkaStream(zookeepers, topic, client)
-    val log = getZookeeperClient(zookeepers, topic, client)
-    ObservableStream(stream, log)
+  def getByteStream(zookeepers: String, topic: String, client: String, autoCommit: Boolean = false): Observable[Message[Array[Byte]]] = {
+    val stream = getKafkaStream(zookeepers, topic, client, autoCommit)
+    if (autoCommit) {
+      ObservableStream(stream)
+    } else {
+      ObservableStream(stream, getZookeeperClient(zookeepers, topic, client))
+    }
   }
 
-  private def getKafkaStream(zookeepers: String, topic: String, client: String): KafkaStream[Array[Byte], Array[Byte]] = {
+  private def getKafkaStream(zookeepers: String, topic: String, client: String, autoCommit: Boolean): KafkaStream[Array[Byte], Array[Byte]] = {
     val props = new Properties()
     props.put("group.id", client)
     props.put("zookeeper.connect", zookeepers)
-    props.put("auto.commit.enable", "false")
+    if (! autoCommit) {
+      props.put("auto.commit.enable", "false")
+    }
     val consumerOpts = new ConsumerConfig(props)
     val connector: ConsumerConnector = Consumer.create(consumerOpts)
     val filter = new Whitelist(topic)

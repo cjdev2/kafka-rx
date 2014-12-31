@@ -5,14 +5,17 @@ import rx.lang.scala.Observable
 
 object ObservableStream {
 
-  def apply(stream: Iterable[MessageAndMetadata[Array[Byte], Array[Byte]]], zk: ZookeeperClient): Observable[Message[Array[Byte]]] = {
+  def apply(stream: Iterable[MessageAndMetadata[Array[Byte], Array[Byte]]]): Observable[Message[Array[Byte]]] = {
+    Observable
+      .from(stream)
+      .map(Message.fromKafka)
+  }
 
+  def apply(stream: Iterable[MessageAndMetadata[Array[Byte], Array[Byte]]], zk: ZookeeperClient): Observable[Message[Array[Byte]]] = {
     lazy val manager: OffsetManager[Array[Byte]] = new OffsetManager[Array[Byte]](checkpointFn = committer.commit)
     lazy val committer = new ZookeeperCommitter(zk, manager)
 
-    val observable = Observable
-      .from(stream)
-      .map(Message.fromKafkaMessage)
+    val observable = apply(stream)
       .map(manager.check)
       .filter(_.isDefined)
       .map(_.get)

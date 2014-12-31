@@ -49,7 +49,7 @@ class ZookeeperClient(topic: String, group: String, zk: CuratorFramework) {
   }
 
   def getLock: InterProcessLock = {
-    val lockPath = s"/locks/kafka/$topic.$group"
+    val lockPath = s"/locks/kafka-rx/$topic.$group"
     new InterProcessMutex(zk, lockPath)
   }
 
