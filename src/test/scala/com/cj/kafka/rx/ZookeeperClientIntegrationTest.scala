@@ -39,7 +39,7 @@ class ZookeeperClientIntegrationTest extends FlatSpec with ShouldMatchers with B
     val partition = 42
     val path = ZKHelper.getPartitionPath(zk.offsetPath, partition)
     val expectedOffset = 1337L
-    val bytes = Longs.toByteArray(expectedOffset)
+    val bytes = expectedOffset.toString.getBytes
     val expectedOffsets = Map[Int, Long](partition -> expectedOffset)
 
     new EnsurePath(path).ensure(client.getZookeeperClient)

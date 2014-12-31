@@ -111,13 +111,13 @@ class OffsetManagerTest extends FlatSpec with ShouldMatchers {
       Map[Int, Long]()
     }
 
-    val passingFn = { x: Map[Int, Long] =>
+    val passingFn = { (_: OffsetManager[String], _: Map[Int, Long]) =>
       "this function should pass".split(" ") should contain("pass")
       Map[Int, Long]()
     }
 
     val message = Message(value="test", topic="test-topic", partition=0, offset=0L, checkpointFn=failingFn)
-    val manager = new OffsetManager[String](checkpointFn=passingFn)
+    val manager = new OffsetManager[String](commit=passingFn)
 
     val checkedMessage = manager.check(message)
     checkedMessage.get.checkpoint() // should not call the failingFn, since the offset manager should have provided the passingFn

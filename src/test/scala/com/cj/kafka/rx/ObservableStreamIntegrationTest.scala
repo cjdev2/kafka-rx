@@ -12,28 +12,38 @@ import rx.lang.scala.Observable
 class ObservableStreamIntegrationTest extends FlatSpec with ShouldMatchers with BeforeAndAfter with MockitoSugar {
 
   "ZKObservableStream" should "provide an observable stream" in {
-    val client: ZookeeperClient = mock[ZookeeperClient]
     val messages = getFakeKafkaMessages(2)
 
-    val stream = ObservableStream(messages, client)
+    val stream = ObservableStream(messages)
     val list = stream.toBlocking.toList
 
     list.size should be(2)
-    list.head.offsets should be(Map(1 -> 1L))
-    list.last.offsets should be(Map(1 -> 1L, 2 -> 2L))
+    list.head.offset should be(1)
+    list.last.offset should be(2)
   }
 
-  it should "only support a single iterator, like a kafka stream" in {
-    val client: ZookeeperClient = mock[ZookeeperClient]
-    val messages = getFakeKafkaMessages(10)
+  it should "cache iterables for subsequent iteration" in {
+    // kafka's iterable only supports single stateful iterator
+    // by having a cache we can circumvent this and get a 'view' of the kafka iterator
+    val server = new TestingServer()
+    val client = CuratorFrameworkFactory.newClient(server.getConnectString, new RetryUntilElapsed(500,50))
+    try {
+      server.start()
+      client.start()
+      val zk: ZookeeperClient = new ZookeeperClient("test", "test", client)
+      val messages = getFakeKafkaMessages(10)
+      val stream: Observable[Long] = ObservableStream(messages, zk).map(_.offset).cache(10)
 
-    val stream: Observable[Long] = ObservableStream(messages, client).map(_.offset)
+      val evens = stream.filter(x => (x % 2) == 0).toBlocking.toList
+      val odds = stream.filter(x => (x % 2) == 1).toBlocking.toList
 
-    val evens = stream.filter(x => (x % 2) == 0).toBlocking.toList
-    val odds = stream.filter(x => (x % 2) == 1).toBlocking.toList
-
-    evens.size should be(5)
-    odds.size should be(0)
+      evens.size should be(5)
+      odds.size should be(5)
+      odds.map(_+1) should be(evens)
+    } finally {
+      server.close()
+      client.close()
+    }
   }
 
   it should "commit offsets to zookeeper through message checkpoints" in {
