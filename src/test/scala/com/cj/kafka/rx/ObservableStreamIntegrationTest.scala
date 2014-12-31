@@ -6,10 +6,9 @@ import org.apache.curator.framework.{CuratorFramework, CuratorFrameworkFactory}
 import org.apache.curator.retry.RetryUntilElapsed
 import org.apache.curator.test.TestingServer
 import org.scalatest._
-import org.scalatest.mock.MockitoSugar
 import rx.lang.scala.Observable
 
-class ObservableStreamIntegrationTest extends FlatSpec with ShouldMatchers with BeforeAndAfter with MockitoSugar {
+class ObservableStreamIntegrationTest extends FlatSpec with ShouldMatchers with BeforeAndAfter {
 
   "ZKObservableStream" should "provide an observable stream" in {
     val messages = getFakeKafkaMessages(2)
