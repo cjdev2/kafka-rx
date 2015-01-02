@@ -38,7 +38,7 @@ class OffsetCommitterIntegrationTest extends FlatSpec with ShouldMatchers with B
   it should "get offsets from zookeeper" in {
     val zk = new OffsetCommitter("test", "test", client)
     val partition = 42
-    val path = ZKHelper.getPartitionPath(zk.offsetPath, partition)
+    val path = KafkaHelper.getPartitionPath(zk.offsetPath, partition)
     val expectedOffset = 1337L
     val bytes = expectedOffset.toString.getBytes
     val expectedOffsets = Map[Int, Long](partition -> expectedOffset)
@@ -60,7 +60,7 @@ class OffsetCommitterIntegrationTest extends FlatSpec with ShouldMatchers with B
   it should "encode offsets as strings" in {
     val zk = new OffsetCommitter("topic", "group", client)
     val partition = 1
-    val path = ZKHelper.getPartitionPath(zk.offsetPath, partition)
+    val path = KafkaHelper.getPartitionPath(zk.offsetPath, partition)
 
     val offsets = Map[Int, Long](partition -> 42)
 

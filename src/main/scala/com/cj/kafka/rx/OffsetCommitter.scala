@@ -11,7 +11,7 @@ import org.apache.curator.framework.recipes.locks.{InterProcessLock, InterProces
 
 class OffsetCommitter(topic: String, group: String, zk: CuratorFramework) {
 
-  val offsetPath = ZKHelper.getConsumerOffsetPath(topic, group)
+  val offsetPath = KafkaHelper.getConsumerOffsetPath(topic, group)
 
   def start() = {
     if (zk.getState != CuratorFrameworkState.STARTED) {
@@ -34,13 +34,13 @@ class OffsetCommitter(topic: String, group: String, zk: CuratorFramework) {
       val bytes = zk.getData.forPath(path)
       val str = new String(bytes, Charsets.UTF_8).trim
       val offset = Longs.tryParse(str).longValue()
-      ZKHelper.extractPartition(path) -> offset
+      KafkaHelper.extractPartition(path) -> offset
     }).toMap
   }
 
   def setOffsets(offsets: Map[Int, Long]): Map[Int, Long] = {
     offsets foreach { case (partition, offset) =>
-      val nodePath = ZKHelper.getPartitionPath(offsetPath, partition)
+      val nodePath = KafkaHelper.getPartitionPath(offsetPath, partition)
       val bytes = offset.toString.getBytes(Charsets.UTF_8)
       Option(zk.checkExists.forPath(nodePath)) match {
         case None =>

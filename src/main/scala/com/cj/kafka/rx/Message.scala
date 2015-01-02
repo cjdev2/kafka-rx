@@ -1,7 +1,5 @@
 package com.cj.kafka.rx
 
-import kafka.message.MessageAndMetadata
-
 case class Message[T](
   value: T,
   topic: String,
@@ -10,6 +8,7 @@ case class Message[T](
   offsets: Map[Int, Long] = Map[Int, Long](),
   private val checkpointFn: (Map[Int, Long]) => Map[Int, Long] = _ => Map[Int, Long]()
 ) {
+  // alternate version of kafkas MessageAndMetadata class that tracks consumer offsets per message
   def checkpoint() = checkpointFn(offsets)
 
   override def equals(other: Any) = {
@@ -22,11 +21,5 @@ case class Message[T](
         message.value == value
       case _ => false
     }
-  }
-}
-
-object Message {
-  def fromKafka(message: MessageAndMetadata[Array[Byte], Array[Byte]]): Message[Array[Byte]] = {
-    Message(value=message.message(), topic=message.topic, partition=message.partition, offset=message.offset)
   }
 }

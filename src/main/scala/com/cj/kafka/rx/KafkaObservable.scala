@@ -11,7 +11,7 @@ object KafkaObservable {
   def apply(stream: KafkaStream): KafkaObservable = {
     Observable
       .from(stream)
-      .map(Message.fromKafka)
+      .map(KafkaHelper.copyMessage)
   }
 
   def apply(stream: KafkaStream, zk: OffsetCommitter): KafkaObservable = {

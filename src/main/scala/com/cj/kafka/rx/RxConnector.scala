@@ -1,6 +1,5 @@
 package com.cj.kafka.rx
 
-import java.util.Properties
 
 import kafka.consumer._
 import org.apache.curator.framework.imps.CuratorFrameworkState
@@ -8,20 +7,9 @@ import org.apache.curator.framework.{CuratorFrameworkFactory, CuratorFramework}
 import org.apache.curator.retry.RetryUntilElapsed
 import rx.lang.scala.Observable
 
-object RxConnector {
-  def getConsumerConfig(config: SimpleConfig) = {
-    val props = new Properties()
-    props.put("group.id", config.group)
-    props.put("zookeeper.connect", config.zookeepers)
-    props.put("auto.offset.reset", if (config.startFromLatest) "largest" else "smallest")
-    props.put("auto.commit.enable", if (config.autocommit) "true" else "false")
-    new ConsumerConfig(props)
-  }
-}
-
 class RxConnector(config: ConsumerConfig) {
 
-  def this(config: SimpleConfig) = this(RxConnector.getConsumerConfig(config))
+  def this(config: SimpleConfig) = this(KafkaHelper.getConsumerConfig(config))
   def this(zookeepers: String, group: String) = this(SimpleConfig(zookeepers, group))
   
   private var kafkaClient: ConsumerConnector = null
