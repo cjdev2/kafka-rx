@@ -11,7 +11,7 @@ import scala.concurrent.duration._
 
 import org.scalatest.{BeforeAndAfter, FlatSpec, ShouldMatchers}
 
-class ZookeeperClientIntegrationTest extends FlatSpec with ShouldMatchers with BeforeAndAfter {
+class OffsetCommitterIntegrationTest extends FlatSpec with ShouldMatchers with BeforeAndAfter {
 
   var server: TestingServer = _
   var client: CuratorFramework = _
@@ -30,13 +30,13 @@ class ZookeeperClientIntegrationTest extends FlatSpec with ShouldMatchers with B
     server = null
   }
 
-  "ZookeeperClient" should "return no offsets given no data" in {
-    val zk = new ZookeeperClient("topic", "group", client)
+  "OffsetCommitter" should "return no offsets given no data" in {
+    val zk = new OffsetCommitter("topic", "group", client)
     zk.getOffsets should be(Map[Int, Long]())
   }
 
   it should "get offsets from zookeeper" in {
-    val zk = new ZookeeperClient("test", "test", client)
+    val zk = new OffsetCommitter("test", "test", client)
     val partition = 42
     val path = ZKHelper.getPartitionPath(zk.offsetPath, partition)
     val expectedOffset = 1337L
@@ -50,7 +50,7 @@ class ZookeeperClientIntegrationTest extends FlatSpec with ShouldMatchers with B
   }
 
   it should "write new offsets to zookeeper" in {
-    val zk = new ZookeeperClient("topic", "group", client)
+    val zk = new OffsetCommitter("topic", "group", client)
     val offsets = Map[Int, Long](1 -> 2)
 
     zk.setOffsets(offsets)
@@ -58,7 +58,7 @@ class ZookeeperClientIntegrationTest extends FlatSpec with ShouldMatchers with B
   }
 
   it should "encode offsets as strings" in {
-    val zk = new ZookeeperClient("topic", "group", client)
+    val zk = new OffsetCommitter("topic", "group", client)
     val partition = 1
     val path = ZKHelper.getPartitionPath(zk.offsetPath, partition)
 
@@ -72,7 +72,7 @@ class ZookeeperClientIntegrationTest extends FlatSpec with ShouldMatchers with B
   }
 
   it should "update existing offsets in zookeeper" in {
-    val zk = new ZookeeperClient("topic", "group", client)
+    val zk = new OffsetCommitter("topic", "group", client)
     val offsets = Map[Int, Long](1 -> 0, 2 -> 0)
     val otherOffsets = Map[Int, Long](1 -> 1)
 
@@ -84,7 +84,7 @@ class ZookeeperClientIntegrationTest extends FlatSpec with ShouldMatchers with B
   }
 
   it should "provide locks" in {
-    val zk = new ZookeeperClient("topic", "group", client)
+    val zk = new OffsetCommitter("topic", "group", client)
     val lock = zk.getLock
     if (lock.acquire(100, SECONDS)) {
       try {

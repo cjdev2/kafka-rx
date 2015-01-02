@@ -17,7 +17,7 @@ case class Message[T](
       case message: Message[T] =>
         message.offsets == offsets &&
         message.topic == topic &&
-        message.partition == partition
+        message.partition == partition &&
         message.offset == offset &&
         message.value == value
       case _ => false

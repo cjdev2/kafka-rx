@@ -9,7 +9,7 @@ import scala.collection.JavaConversions._
 
 import org.apache.curator.framework.recipes.locks.{InterProcessLock, InterProcessMutex}
 
-class ZookeeperClient(topic: String, group: String, zk: CuratorFramework) {
+class OffsetCommitter(topic: String, group: String, zk: CuratorFramework) {
 
   val offsetPath = ZKHelper.getConsumerOffsetPath(topic, group)
 

@@ -2,18 +2,18 @@ package com.cj.kafka.rx
 
 import kafka.message.MessageAndMetadata
 import kafka.serializer.DefaultDecoder
-import org.apache.curator.framework.{CuratorFramework, CuratorFrameworkFactory}
+import org.apache.curator.framework.CuratorFrameworkFactory
 import org.apache.curator.retry.RetryUntilElapsed
 import org.apache.curator.test.TestingServer
 import org.scalatest._
 import rx.lang.scala.Observable
 
-class ObservableStreamIntegrationTest extends FlatSpec with ShouldMatchers with BeforeAndAfter {
+class KafkaObservableIntegrationTest extends FlatSpec with ShouldMatchers with BeforeAndAfter {
 
-  "ZKObservableStream" should "provide an observable stream" in {
+  "KafkaObservable" should "provide an observable stream" in {
     val messages = getFakeKafkaMessages(2)
 
-    val stream = ObservableStream(messages)
+    val stream = KafkaObservable(messages)
     val list = stream.toBlocking.toList
 
     list.size should be(2)
@@ -29,9 +29,9 @@ class ObservableStreamIntegrationTest extends FlatSpec with ShouldMatchers with 
     try {
       server.start()
       client.start()
-      val zk: ZookeeperClient = new ZookeeperClient("test", "test", client)
+      val zk: OffsetCommitter = new OffsetCommitter("test", "test", client)
       val messages = getFakeKafkaMessages(10)
-      val stream: Observable[Long] = ObservableStream(messages, zk).map(_.offset).cache(10)
+      val stream: Observable[Long] = KafkaObservable(messages, zk).map(_.offset).cache(10)
 
       val evens = stream.filter(x => (x % 2) == 0).toBlocking.toList
       val odds = stream.filter(x => (x % 2) == 1).toBlocking.toList
@@ -51,9 +51,9 @@ class ObservableStreamIntegrationTest extends FlatSpec with ShouldMatchers with 
     try {
       server.start()
       client.start()
-      val zk: ZookeeperClient = new ZookeeperClient("test", "test", client)
+      val zk: OffsetCommitter = new OffsetCommitter("test", "test", client)
       val fakeMessages = getFakeKafkaMessages(10)
-      val stream: Observable[Message[Long]] = ObservableStream(fakeMessages, zk) map { message =>
+      val stream: Observable[Message[Long]] = KafkaObservable(fakeMessages, zk) map { message =>
         message.copy(value = message.offset)
       }
       val messages = stream.toBlocking.toList
