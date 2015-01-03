@@ -35,8 +35,7 @@ class OffsetManager[T](
     // by reconciling our offsets with another view, we can determine which we have ownership over
     currentOffsets = currentOffsets.filter { case (partition, offset) =>
       val externalOffset = externalOffsets.getOrElse(partition, -1L)
-      val internalOffset = internalOffsets(partition)
-      internalOffset >= externalOffset
+      offset >= externalOffset
     }
     internalOffsets filter { case (partition, offset) =>
       currentOffsets.contains(partition)
