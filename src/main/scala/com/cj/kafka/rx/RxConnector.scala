@@ -15,14 +15,17 @@ class RxConnector(config: ConsumerConfig) {
   private var kafkaClient: ConsumerConnector = null
   private var zkClient: CuratorFramework = null
 
-  def getMessageStream(topic: String): Observable[Message[Array[Byte]]] = {
+  def getMessageStream(topic: String) = getMessageStreams(topic)(0)
+  def getMessageStreams(topic: String, numStreams: Int = 1): Seq[Observable[Message[Array[Byte]]]] = {
     connect()
-    val kafkaStream: KafkaStream[Array[Byte], Array[Byte]] = kafkaClient.createMessageStreamsByFilter(new Whitelist(topic))(0)
+    val kafkaStreams: Seq[KafkaStream[Array[Byte], Array[Byte]]] = kafkaClient.createMessageStreamsByFilter(new Whitelist(topic), numStreams = numStreams)
     if (config.autoCommitEnable) {
-      KafkaObservable(kafkaStream)
+      kafkaStreams.map(KafkaObservable(_))
     } else {
       val zkCommitter = new OffsetCommitter(topic, config.groupId, zkClient)
-      KafkaObservable(kafkaStream, zkCommitter)
+      kafkaStreams.map({ case stream =>
+        KafkaObservable(stream, zkCommitter)
+      })
     }
   }
 
