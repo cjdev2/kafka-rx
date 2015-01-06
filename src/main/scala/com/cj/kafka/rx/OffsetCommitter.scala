@@ -33,7 +33,7 @@ class OffsetCommitter(topic: String, group: String, zk: CuratorFramework) {
     offsetPaths.map({ path =>
       val bytes = zk.getData.forPath(path)
       val str = new String(bytes, Charsets.UTF_8).trim
-      val offset = Longs.tryParse(str).longValue()
+      val offset = java.lang.Long.parseLong(str)
       KafkaHelper.extractPartition(path) -> offset
     }).toMap
   }
