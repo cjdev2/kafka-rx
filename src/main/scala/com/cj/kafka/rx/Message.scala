@@ -1,15 +1,21 @@
 package com.cj.kafka.rx
 
+
+// alternate version of kafkas MessageAndMetadata class that tracks consumer offsets per message
 case class Message[T](
   value: T,
   topic: String,
   partition: Int,
   offset: Long,
   offsets: Map[Int, Long] = Map[Int, Long](),
-  private val checkpointFn: (Map[Int, Long]) => Map[Int, Long] = _ => Map[Int, Long]()
+  callback: (Map[Int, Long], Map[Int, Long] => Unit) => Map[Int, Long] = { case (x, fn) =>
+    fn(x); x
+  }
 ) {
-  // alternate version of kafkas MessageAndMetadata class that tracks consumer offsets per message
-  def checkpoint() = checkpointFn(offsets)
+
+  def checkpoint(hook: (Map[Int, Long]) => Unit = { _ => () }): Map[Int, Long] = {
+    callback(offsets, hook)
+  }
 
   override def equals(other: Any) = {
     other match {

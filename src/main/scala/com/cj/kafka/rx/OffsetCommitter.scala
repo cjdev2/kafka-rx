@@ -57,11 +57,12 @@ class OffsetCommitter(topic: String, group: String, zk: CuratorFramework) {
     new InterProcessMutex(zk, lockPath)
   }
 
-  def commit(manager: OffsetManager[Array[Byte]], offsets: Map[Int, Long]): Map[Int, Long] = {
+  def commit(manager: OffsetManager[Array[Byte]], offsets: Map[Int, Long], callback: (Map[Int, Long]) => Unit): Map[Int, Long] = {
     val lock = getLock
     lock.acquire()
     try {
       val zkOffsets = getOffsets
+      callback(zkOffsets)
       val adjustedOffsets = manager.adjustOffsets(zkOffsets, offsets)
       setOffsets(adjustedOffsets)
     } catch {

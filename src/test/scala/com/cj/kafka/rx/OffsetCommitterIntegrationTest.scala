@@ -97,4 +97,16 @@ class OffsetCommitterIntegrationTest extends FlatSpec with ShouldMatchers with B
     }
   }
 
+  it should "provide a commit hook for doing work within a zk lock" in {
+    val zk = new OffsetCommitter("topic", "group", client)
+    val mgr = new OffsetManager[Array[Byte]]
+    val offsets = Map[Int, Long](1 -> 0, 2 -> 0)
+    val otherOffsets = Map[Int, Long](1 -> 1, 2 -> 1)
+
+    zk.setOffsets(offsets)
+
+    zk.commit(mgr, otherOffsets, { zkOffsets =>
+      zkOffsets should be(offsets)
+    })
+  }
 }

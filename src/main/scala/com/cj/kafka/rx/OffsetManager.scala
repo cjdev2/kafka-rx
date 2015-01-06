@@ -1,12 +1,12 @@
 package com.cj.kafka.rx
 
-
 class OffsetManager[T](
-  commit: (OffsetManager[T], Map[Int, Long]) => Map[Int, Long] =
-    (_: OffsetManager[T], _: Map[Int, Long]) => Map[Int, Long]()) {
+  commit: (OffsetManager[T], Map[Int, Long], (Map[Int, Long]) => Unit) => Map[Int, Long] =
+    (self: OffsetManager[T], offsets: Map[Int, Long], callback: (Map[Int, Long]) => Unit) => Map[Int, Long]()) {
 
   // Offset Manager keeps track of offsets per partition for a particular kafka stream
   type PartitionOffsets = Map[Int, Long]
+  type CommitHook = (Map[Int, Long]) => Unit
 
   private var currentOffsets = Map[Int, Long]()
 
@@ -20,11 +20,11 @@ class OffsetManager[T](
     }
   }
 
-  def checkpoint(offsets: PartitionOffsets) = commit(this, offsets)
+  def checkpoint(offsets: PartitionOffsets, callback: CommitHook) = commit(this, offsets, callback)
 
   private def setOffsets(message: Message[T]): Some[Message[T]] = {
     currentOffsets += message.partition -> message.offset
-    Some(message.copy(offsets = currentOffsets, checkpointFn = this.checkpoint))
+    Some(message.copy(offsets = currentOffsets, callback = this.checkpoint))
   }
 
   def getOffsets: PartitionOffsets = currentOffsets
