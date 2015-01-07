@@ -56,21 +56,32 @@ class OffsetCommitter(topic: String, group: String, zk: CuratorFramework) {
     val lockPath = s"/locks/kafka-rx/$topic.$group"
     new InterProcessMutex(zk, lockPath)
   }
-
-  def commit(manager: OffsetManager[Array[Byte]], offsets: Map[Int, Long], callback: (Map[Int, Long]) => Unit): Map[Int, Long] = {
-    val lock = getLock
-    lock.acquire()
+  
+  def getPartitionLock(partition: Int): InterProcessLock = {
+    val lockPath = s"/locks/kafka-rx/$topic.$group.$partition"
+    new InterProcessMutex(zk, lockPath)
+  }
+  
+  def withPartitionLocks[T](partitions: Iterable[Int])(callback: => T): T = {
+    val locks = partitions.map(getPartitionLock)
     try {
-      val zkOffsets = getOffsets
-      callback(zkOffsets)
-      val adjustedOffsets = manager.adjustOffsets(zkOffsets, offsets)
-      setOffsets(adjustedOffsets)
+      locks.foreach(_.acquire)
+      callback
     } catch {
       case err: Throwable =>
         err.printStackTrace()
         throw err
     } finally {
-      lock.release()
+      locks.foreach(_.release)
+    }
+  }
+
+  def commit(manager: OffsetManager[Array[Byte]], offsets: Map[Int, Long], callback: (Map[Int, Long]) => Unit): Map[Int, Long] = {
+    withPartitionLocks(offsets.keys) {
+      val zkOffsets = getOffsets
+      callback(zkOffsets)
+      val adjustedOffsets = manager.adjustOffsets(zkOffsets, offsets)
+      setOffsets(adjustedOffsets)
     }
   }
 
