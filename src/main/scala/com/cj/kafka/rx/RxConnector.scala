@@ -49,8 +49,10 @@ class RxConnector(config: ConsumerConfig) {
   }
 
   def connect() = {
-    ensureKafkaConnection()
-    if (!config.autoCommitEnable) ensureZookeeperConnection()
+    this.synchronized {
+      ensureKafkaConnection()
+      if (!config.autoCommitEnable) ensureZookeeperConnection()
+    }
   }
 
   private def ensureKafkaConnection(): Unit = {
