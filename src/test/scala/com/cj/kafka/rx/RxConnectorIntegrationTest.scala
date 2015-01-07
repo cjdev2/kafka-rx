@@ -8,12 +8,13 @@ import org.apache.curator.test.TestingServer
 import org.scalatest._
 import rx.lang.scala.Observable
 
-class KafkaObservableIntegrationTest extends FlatSpec with ShouldMatchers with BeforeAndAfter {
+class RxConnectorIntegrationTest extends FlatSpec with ShouldMatchers with BeforeAndAfter {
 
   "KafkaObservable" should "provide an observable stream" in {
+    val conn = new RxConnector("test", "test")
     val messages = getFakeKafkaMessages(2)
 
-    val stream = KafkaObservable(messages)
+    val stream = conn.getObservableStream(messages)
     val list = stream.toBlocking.toList
 
     list.size should be(2)
@@ -25,13 +26,14 @@ class KafkaObservableIntegrationTest extends FlatSpec with ShouldMatchers with B
     // kafka's iterable only supports single stateful iterator
     // by having a cache we can circumvent this and get a 'view' of the kafka iterator
     val server = new TestingServer()
+    val conn = new RxConnector("test", "test")
     val client = CuratorFrameworkFactory.newClient(server.getConnectString, new RetryUntilElapsed(500,50))
     try {
       server.start()
       client.start()
       val zk: OffsetCommitter = new OffsetCommitter("test", "test", client)
       val messages = getFakeKafkaMessages(10)
-      val stream: Observable[Long] = KafkaObservable(messages, zk).map(_.offset).cache(10)
+      val stream: Observable[Long] = conn.getObservableStream(messages, zk).map(_.offset).cache(10)
 
       val evens = stream.filter(x => (x % 2) == 0).toBlocking.toList
       val odds = stream.filter(x => (x % 2) == 1).toBlocking.toList
@@ -48,12 +50,13 @@ class KafkaObservableIntegrationTest extends FlatSpec with ShouldMatchers with B
   it should "commit offsets to zookeeper through message checkpoints" in {
     val server = new TestingServer()
     val client = CuratorFrameworkFactory.newClient(server.getConnectString, new RetryUntilElapsed(500,50))
+    val conn = new RxConnector("test", "test")
     try {
       server.start()
       client.start()
       val zk: OffsetCommitter = new OffsetCommitter("test", "test", client)
       val fakeMessages = getFakeKafkaMessages(10)
-      val stream: Observable[Message[Long]] = KafkaObservable(fakeMessages, zk) map { message =>
+      val stream: Observable[Message[Long]] = conn.getObservableStream(fakeMessages, zk) map { message =>
         message.copy(value = message.offset)
       }
       val messages = stream.toBlocking.toList
