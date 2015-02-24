@@ -1,13 +1,14 @@
 package com.cj.kafka.rx
 
 import com.google.common.base.Charsets
-import com.google.common.primitives.Longs
 import org.apache.curator.framework.{CuratorFrameworkFactory, CuratorFramework}
 import org.apache.curator.test.TestingServer
 import org.apache.curator.retry.RetryUntilElapsed
 import org.apache.curator.utils.EnsurePath
 
 import scala.concurrent.duration._
+
+import MessageHelper._
 
 import org.scalatest.{BeforeAndAfter, FlatSpec, ShouldMatchers}
 
@@ -31,60 +32,64 @@ class OffsetCommitterIntegrationTest extends FlatSpec with ShouldMatchers with B
   }
 
   "OffsetCommitter" should "return no offsets given no data" in {
-    val zk = new OffsetCommitter("topic", "group", client)
-    zk.getOffsets should be(Map[Int, Long]())
+    val zk = new OffsetCommitter("group", client)
+    zk.getOffsets(List()) should be(Map[TopicPartition, Long]())
   }
 
   it should "get offsets from zookeeper" in {
-    val zk = new OffsetCommitter("test", "test", client)
+    val zk = new OffsetCommitter("test", client)
+    val topic = "test"
     val partition = 42
-    val path = KafkaHelper.getPartitionPath(zk.offsetPath, partition)
+    val path = KafkaHelper.getPartitionPath(zk.offsetBasePath(topic), partition)
     val expectedOffset = 1337L
     val bytes = expectedOffset.toString.getBytes
-    val expectedOffsets = Map[Int, Long](partition -> expectedOffset)
+    val expectedOffsets = Map[TopicPartition, Long](topic -> partition -> expectedOffset)
 
     new EnsurePath(path).ensure(client.getZookeeperClient)
     client.setData().forPath(path, bytes)
 
-    zk.getOffsets should be(expectedOffsets)
+    zk.getOffsets(List(topic -> partition)) should be(expectedOffsets)
   }
 
   it should "write new offsets to zookeeper" in {
-    val zk = new OffsetCommitter("topic", "group", client)
-    val offsets = Map[Int, Long](1 -> 2)
+    val topic = "topic"
+    val zk = new OffsetCommitter("group", client)
+    val offsets = Map[TopicPartition, Long](topic -> 1 -> 2)
 
     zk.setOffsets(offsets)
-    zk.getOffsets should be(offsets)
+    zk.getOffsets(offsets.keys) should be(offsets)
   }
 
   it should "encode offsets as strings" in {
-    val zk = new OffsetCommitter("topic", "group", client)
+    val topic = "topic"
+    val zk = new OffsetCommitter( "group", client)
     val partition = 1
-    val path = KafkaHelper.getPartitionPath(zk.offsetPath, partition)
+    val path = KafkaHelper.getPartitionPath(zk.offsetBasePath(topic), partition)
 
-    val offsets = Map[Int, Long](partition -> 42)
+    val offsets = Map[TopicPartition, Long](topic -> partition -> 42)
 
     zk.setOffsets(offsets)
 
     val bytes = client.getData.forPath(path)
     val str = new String(bytes, Charsets.UTF_8)
-    str should be(offsets(partition).toString)
+    str should be(offsets(topic -> partition).toString)
   }
 
   it should "update existing offsets in zookeeper" in {
-    val zk = new OffsetCommitter("topic", "group", client)
-    val offsets = Map[Int, Long](1 -> 0, 2 -> 0)
-    val otherOffsets = Map[Int, Long](1 -> 1)
+    val topic = "topic"
+    val zk = new OffsetCommitter( "group", client)
+    val offsets = Map[TopicPartition, Long](topic -> 1 -> 0, topic -> 2 -> 0)
+    val otherOffsets = Map[TopicPartition, Long](topic -> 1 -> 1)
 
     zk.setOffsets(offsets)
-    zk.getOffsets should be(offsets)
+    zk.getOffsets(offsets.keys) should be(offsets)
 
     val zkOffsets = zk.setOffsets(otherOffsets)
     zkOffsets should be(Map(1 -> 1L, 2 -> 0L))
   }
 
   it should "provide locks" in {
-    val zk = new OffsetCommitter("topic", "group", client)
+    val zk = new OffsetCommitter("group", client)
     val lock = zk.getLock
     if (lock.acquire(100, SECONDS)) {
       try {
@@ -98,10 +103,11 @@ class OffsetCommitterIntegrationTest extends FlatSpec with ShouldMatchers with B
   }
 
   it should "provide a commit hook for doing work within a zk lock" in {
-    val zk = new OffsetCommitter("topic", "group", client)
+    val topic = "topic"
+    val zk = new OffsetCommitter("group", client)
     val mgr = new OffsetManager[Array[Byte]]
-    val offsets = Map[Int, Long](1 -> 0, 2 -> 0)
-    val otherOffsets = Map[Int, Long](1 -> 1, 2 -> 1)
+    val offsets = Map[TopicPartition, Long](topic -> 1 -> 0, topic -> 2 -> 0)
+    val otherOffsets = Map[TopicPartition, Long](topic -> 1 -> 1, topic -> 2 -> 1)
 
     zk.setOffsets(offsets)
 

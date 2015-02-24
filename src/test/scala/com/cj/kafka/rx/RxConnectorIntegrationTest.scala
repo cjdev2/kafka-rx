@@ -31,7 +31,7 @@ class RxConnectorIntegrationTest extends FlatSpec with ShouldMatchers with Befor
     try {
       server.start()
       client.start()
-      val zk: OffsetCommitter = new OffsetCommitter("test", "test", client)
+      val zk: OffsetCommitter = new OffsetCommitter("test", client)
       val messages = getFakeKafkaMessages(10)
       val stream: Observable[Long] = conn.getObservableStream(messages, zk).map(_.offset).cache(10)
 
@@ -54,17 +54,17 @@ class RxConnectorIntegrationTest extends FlatSpec with ShouldMatchers with Befor
     try {
       server.start()
       client.start()
-      val zk: OffsetCommitter = new OffsetCommitter("test", "test", client)
+      val zk: OffsetCommitter = new OffsetCommitter("test", client)
       val fakeMessages = getFakeKafkaMessages(10)
       val stream: Observable[Message[Long]] = conn.getObservableStream(fakeMessages, zk) map { message =>
         message.copy(value = message.offset)
       }
       val messages = stream.toBlocking.toList
       messages.last.checkpoint()
-      val adjustedOffsets = messages.last.offsets map { case (partition, offset) =>
-        partition -> (offset + 1)
+      val adjustedOffsets = messages.last.offsets map { case (topicPartition, offset) =>
+        topicPartition -> (offset + 1)
       }
-      zk.getOffsets should be(adjustedOffsets)
+      zk.getOffsets(messages.last.offsets.keys) should be(adjustedOffsets)
     } finally {
       server.close()
       client.close()

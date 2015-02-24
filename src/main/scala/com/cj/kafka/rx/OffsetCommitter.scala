@@ -1,17 +1,17 @@
 package com.cj.kafka.rx
 
 import com.google.common.base.Charsets
-import com.google.common.primitives.Longs
 import org.apache.curator.framework.CuratorFramework
 import org.apache.curator.framework.imps.CuratorFrameworkState
 import org.apache.curator.utils.ZKPaths
 import scala.collection.JavaConversions._
 
 import org.apache.curator.framework.recipes.locks.{InterProcessLock, InterProcessMutex}
+import MessageHelper._
 
-class OffsetCommitter(topic: String, group: String, zk: CuratorFramework) {
+class OffsetCommitter(group: String, zk: CuratorFramework) {
 
-  val offsetPath = KafkaHelper.getConsumerOffsetPath(topic, group)
+  def offsetBasePath(topic:String) = KafkaHelper.getConsumerOffsetPath(topic, group)
 
   def start() = {
     if (zk.getState != CuratorFrameworkState.STARTED) {
@@ -22,25 +22,25 @@ class OffsetCommitter(topic: String, group: String, zk: CuratorFramework) {
 
   def close() = zk.close()
 
-  def getOffsets: Map[Int, Long] = {
-    val offsetPaths: Seq[String] =
-      Option(zk.checkExists.forPath(offsetPath)) match {
-        case None => List()
-        case Some(fileStats) =>
-          zk.getChildren.forPath(offsetPath)
-            .map(ZKPaths.makePath(offsetPath, _))
-      }
-    offsetPaths.map({ path =>
-      val bytes = zk.getData.forPath(path)
-      val str = new String(bytes, Charsets.UTF_8).trim
-      val offset = java.lang.Long.parseLong(str)
-      KafkaHelper.extractPartition(path) -> offset
-    }).toMap
+  def getOffsets(topicPartitions: Iterable[TopicPartition]): OffsetMap = {
+     topicPartitions.flatMap { topicPartition =>
+       val (topic, partition) = topicPartition
+       val path = KafkaHelper.getPartitionPath(offsetBasePath(topic), partition)
+       Option(zk.checkExists.forPath(path)) match {
+         case None => List()
+         case Some(filestats) =>
+           val bytes = zk.getData.forPath(path)
+           val str = new String(bytes, Charsets.UTF_8).trim
+           val offset = java.lang.Long.parseLong(str)
+           List(topicPartition -> offset)
+       }
+     }.toMap
   }
 
-  def setOffsets(offsets: Map[Int, Long]): Map[Int, Long] = {
-    offsets foreach { case (partition, offset) =>
-      val nodePath = KafkaHelper.getPartitionPath(offsetPath, partition)
+  def setOffsets(offsets: OffsetMap): OffsetMap = {
+    offsets foreach { case (topicPartition, offset) =>
+      val (topic,partition) = topicPartition
+      val nodePath = KafkaHelper.getPartitionPath(offsetBasePath(topic), partition)
       val bytes = offset.toString.getBytes(Charsets.UTF_8)
       Option(zk.checkExists.forPath(nodePath)) match {
         case None =>
@@ -49,20 +49,21 @@ class OffsetCommitter(topic: String, group: String, zk: CuratorFramework) {
           zk.setData().forPath(nodePath, bytes)
       }
     }
-    getOffsets
+    getOffsets(offsets.keys)
   }
 
   def getLock: InterProcessLock = {
-    val lockPath = s"/locks/kafka-rx/$topic.$group"
+    val lockPath = s"/locks/kafka-rx/$group"
     new InterProcessMutex(zk, lockPath)
   }
   
-  def getPartitionLock(partition: Int): InterProcessLock = {
+  def getPartitionLock(topicPartition:TopicPartition) : InterProcessLock = {
+    val (topic,partition) = topicPartition
     val lockPath = s"/locks/kafka-rx/$topic.$group.$partition"
     new InterProcessMutex(zk, lockPath)
   }
   
-  def withPartitionLocks[T](partitions: Iterable[Int])(callback: => T): T = {
+  def withPartitionLocks[T](partitions: Iterable[TopicPartition])(callback: => T): T = {
     val locks = partitions.map(getPartitionLock)
     try {
       locks.foreach(_.acquire)
@@ -76,9 +77,9 @@ class OffsetCommitter(topic: String, group: String, zk: CuratorFramework) {
     }
   }
 
-  def commit(manager: OffsetManager[Array[Byte]], offsets: Map[Int, Long], callback: (Map[Int, Long]) => Unit): Map[Int, Long] = {
+  def commit(manager: OffsetManager[Array[Byte]], offsets: OffsetMap, callback: CommitHook): OffsetMap = {
     withPartitionLocks(offsets.keys) {
-      val zkOffsets = getOffsets
+      val zkOffsets = getOffsets(offsets.keys)
       callback(zkOffsets)
       val adjustedOffsets = manager.adjustOffsets(zkOffsets, offsets)
       setOffsets(adjustedOffsets)

@@ -26,7 +26,7 @@ class RxConnector(config: ConsumerConfig) {
     if (config.autoCommitEnable) {
       kafkaStreams.map(getObservableStream)
     } else {
-      val zkCommitter = new OffsetCommitter(topic, config.groupId, zkClient)
+      val zkCommitter = new OffsetCommitter(config.groupId, zkClient)
       kafkaStreams.map({ case stream =>
         getObservableStream(stream, zkCommitter)
       })

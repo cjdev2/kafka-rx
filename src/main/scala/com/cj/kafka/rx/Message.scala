@@ -1,5 +1,11 @@
 package com.cj.kafka.rx
 
+object MessageHelper {
+  type TopicPartition = (String, Int)
+  type OffsetMap = Map[TopicPartition, Long]
+  type CommitHook = OffsetMap => Unit
+}
+import MessageHelper._
 
 // alternate version of kafkas MessageAndMetadata class that tracks consumer offsets per message
 case class Message[T](
@@ -7,15 +13,21 @@ case class Message[T](
   topic: String,
   partition: Int,
   offset: Long,
-  offsets: Map[Int, Long] = Map[Int, Long](),
-  callback: (Map[Int, Long], Map[Int, Long] => Unit) => Map[Int, Long] = { case (x, fn) =>
+  offsets: OffsetMap = Map[TopicPartition, Long](),
+  callback: (OffsetMap,CommitHook) => OffsetMap = { case (x, fn) =>
     fn(x); x
   }
 ) {
 
-  def checkpoint(hook: (Map[Int, Long]) => Unit = { _ => () }): Map[Int, Long] = {
+  def checkpoint(): OffsetMap = {
+    checkpoint(_ => ())
+  }
+
+  def checkpoint(hook: CommitHook): OffsetMap = {
     callback(offsets, hook)
   }
+
+  val topicPartition = topic -> partition
 
   override def equals(other: Any) = {
     other match {

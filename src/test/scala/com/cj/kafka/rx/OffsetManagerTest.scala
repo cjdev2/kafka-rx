@@ -1,5 +1,7 @@
 package com.cj.kafka.rx
 
+import MessageHelper._
+
 import org.scalatest.{FlatSpec, ShouldMatchers}
 
 class OffsetManagerTest extends FlatSpec with ShouldMatchers {
@@ -83,8 +85,9 @@ class OffsetManagerTest extends FlatSpec with ShouldMatchers {
   it should "adjust offsets for committing to zookeeper" in {
     // given an OffsetManager is in a certain state
     val offsetManager = new OffsetManager[String]
-    val messageA = Message(value="test message", topic="test-topic", partition=0, offset=5L)
-    val messageB = Message(value="test message", topic="test-topic", partition=1, offset=20L)
+    val topic = "test-topic"
+    val messageA = Message(value="test message", topic=topic, partition=0, offset=5L)
+    val messageB = Message(value="test message", topic=topic, partition=1, offset=20L)
     offsetManager.check(messageA)
     offsetManager.check(messageB)
     val higherOffset = messageA.offset+100
@@ -93,7 +96,7 @@ class OffsetManagerTest extends FlatSpec with ShouldMatchers {
     // zookeeper partition A has a higher offset than our local offset manager is aware of
     // the only way we expect this to happen is another process is managing this partition
     // meaning we should relinquish ownership and filter out information on that partition
-    val offsetsFromZK = Map(messageA.partition -> higherOffset, messageB.partition -> lowerOffset)
+    val offsetsFromZK = Map(messageA.topicPartition -> higherOffset, messageB.topicPartition -> lowerOffset)
 
     // when
     val filteredOffsets = offsetManager.adjustOffsets(offsetsFromZK)
@@ -101,8 +104,8 @@ class OffsetManagerTest extends FlatSpec with ShouldMatchers {
     // then
     // offsets need to be incremented for zookeeper:
     // kafka stored offsets are 'where do I start from' and our manager is 'what did I last process'
-    val expectedManagerOffsets = Map(messageB.partition -> messageB.offset)
-    val expectedAdjustedOffsets = Map(messageB.partition -> (messageB.offset + 1))
+    val expectedManagerOffsets = Map(messageB.topicPartition -> messageB.offset)
+    val expectedAdjustedOffsets = Map(messageB.topicPartition -> (messageB.offset + 1))
 
     offsetManager.getOffsets should be(expectedManagerOffsets)
     filteredOffsets should be(expectedAdjustedOffsets)
@@ -110,17 +113,14 @@ class OffsetManagerTest extends FlatSpec with ShouldMatchers {
 
   it should "provide its checkpoint function to all the messages" in {
 
-    type Offsets = Map[Int, Long]
-    type CommitHook = Offsets => Unit
-
-    val failingFn = { (_: Offsets, _: CommitHook) =>
+    val failingFn = { (_: OffsetMap, _: CommitHook) =>
       throw new RuntimeException("This function should never be called")
-      Map[Int, Long]()
+      Map[TopicPartition, Long]()
     }
 
-    val passingFn = { (_: OffsetManager[String], _: Offsets, _ :CommitHook) =>
+    val passingFn = { (_: OffsetManager[String], _: OffsetMap, _ :CommitHook) =>
       "this function should pass".split(" ") should contain("pass")
-      Map[Int, Long]()
+      Map[TopicPartition, Long]()
     }
 
     val message = Message(value="test", topic="test-topic", partition=0, offset=0L, callback=failingFn)
