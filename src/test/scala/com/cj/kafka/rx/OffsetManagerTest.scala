@@ -20,7 +20,7 @@ class OffsetManagerTest extends FlatSpec with ShouldMatchers {
     offsets.check(message)
 
     // then
-    offsets.getOffsets should be(Map(message.partition -> message.offset))
+    offsets.getOffsets should be(Map(message.topicPartition -> message.offset))
   }
 
   it should "not record the same message twice" in {
@@ -48,7 +48,7 @@ class OffsetManagerTest extends FlatSpec with ShouldMatchers {
     val oldAttempt = offsets.check(oldMessage)
 
     // then
-    offsets.getOffsets should be(Map(newMessage.partition -> newMessage.offset))
+    offsets.getOffsets should be(Map(newMessage.topicPartition -> newMessage.offset))
     newAttempt should be(Some(newMessage.copy(offsets = offsets.getOffsets)))
     oldAttempt should be(None)
   }
@@ -64,7 +64,7 @@ class OffsetManagerTest extends FlatSpec with ShouldMatchers {
     offsets.check(messageB)
 
     // then
-    offsets.getOffsets should be(Map(messageA.partition -> messageA.offset, messageB.partition -> messageB.offset))
+    offsets.getOffsets should be(Map(messageA.topicPartition -> messageA.offset, messageB.topicPartition -> messageB.offset))
   }
 
   it should "know which partitions it owns" in {
@@ -79,7 +79,7 @@ class OffsetManagerTest extends FlatSpec with ShouldMatchers {
     val partitions = offsets.getOffsets.keySet
 
     // then
-    partitions should be(Set(messageA.partition, messageB.partition))
+    partitions should be(Set(messageA.topicPartition, messageB.topicPartition))
   }
 
   it should "adjust offsets for committing to zookeeper" in {

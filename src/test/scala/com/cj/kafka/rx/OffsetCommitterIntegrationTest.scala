@@ -36,7 +36,7 @@ class OffsetCommitterIntegrationTest extends FlatSpec with ShouldMatchers with B
     zk.getOffsets(List()) should be(Map[TopicPartition, Long]())
   }
 
-  it should "get offsets from zookeeper" in {
+  it should "get offsets from zookeeper for one topic and partition" in {
     val zk = new OffsetCommitter("test", client)
     val topic = "test"
     val partition = 42
@@ -49,6 +49,26 @@ class OffsetCommitterIntegrationTest extends FlatSpec with ShouldMatchers with B
     client.setData().forPath(path, bytes)
 
     zk.getOffsets(List(topic -> partition)) should be(expectedOffsets)
+  }
+  it should "get offsets from zookeeper for multiple topics" in {
+    val zk = new OffsetCommitter("test", client)
+    val topic1 = "topic1"
+    val topic2 = "topic2"
+    val partition = 42
+    val path1 = KafkaHelper.getPartitionPath(zk.offsetBasePath(topic1), partition)
+    val path2 = KafkaHelper.getPartitionPath(zk.offsetBasePath(topic2), partition)
+    val expectedOffset = 1337L
+    val bytes = expectedOffset.toString.getBytes
+    val expectedOffsets1 = Map[TopicPartition, Long](topic1 -> partition -> expectedOffset)
+    val expectedOffsets2 = Map[TopicPartition, Long](topic2 -> partition -> expectedOffset)
+
+    new EnsurePath(path1).ensure(client.getZookeeperClient)
+    client.setData().forPath(path1, bytes)
+
+    new EnsurePath(path2).ensure(client.getZookeeperClient)
+    client.setData().forPath(path2, bytes)
+
+    zk.getOffsets(List(topic1 -> partition, topic2 -> partition)) should be(expectedOffsets1 ++ expectedOffsets2)
   }
 
   it should "write new offsets to zookeeper" in {
@@ -75,17 +95,37 @@ class OffsetCommitterIntegrationTest extends FlatSpec with ShouldMatchers with B
     str should be(offsets(topic -> partition).toString)
   }
 
-  it should "update existing offsets in zookeeper" in {
+  it should "update existing offsets in zookeeper for correct partition" in {
     val topic = "topic"
     val zk = new OffsetCommitter( "group", client)
-    val offsets = Map[TopicPartition, Long](topic -> 1 -> 0, topic -> 2 -> 0)
-    val otherOffsets = Map[TopicPartition, Long](topic -> 1 -> 1)
+    val existingOffsets = Map[TopicPartition, Long](topic -> 1 -> 0, topic -> 2 -> 0)
+    val newOffsets = Map[TopicPartition, Long](topic -> 1 -> 1)
 
-    zk.setOffsets(offsets)
-    zk.getOffsets(offsets.keys) should be(offsets)
+    //Set original ZK offsets
+    zk.setOffsets(existingOffsets)
+    zk.getOffsets(existingOffsets.keys) should be(existingOffsets)
 
-    val zkOffsets = zk.setOffsets(otherOffsets)
-    zkOffsets should be(Map(1 -> 1L, 2 -> 0L))
+    //Adding new offsets to ZK
+    zk.setOffsets(newOffsets)
+    val zkOffsets = zk.getOffsets(existingOffsets.keys)
+    zkOffsets should be(Map(topic -> 1 -> 1L, topic -> 2 -> 0L))
+  }
+
+  it should "update existing offsets in zookeeper for correct topic" in {
+    val topic1 = "topic1"
+    val topic2 = "topic2"
+    val zk = new OffsetCommitter( "group", client)
+    val existingOffsets = Map[TopicPartition, Long](topic1 -> 1 -> 0, topic2 -> 1 -> 0)
+    val newOffsets = Map[TopicPartition, Long](topic1 -> 1 -> 1)
+
+    //Set original ZK offsets
+    zk.setOffsets(existingOffsets)
+    zk.getOffsets(existingOffsets.keys) should be(existingOffsets)
+
+    //Adding new offsets to ZK
+    zk.setOffsets(newOffsets)
+    val zkOffsets = zk.getOffsets(existingOffsets.keys)
+    zkOffsets should be(Map(topic1 -> 1 -> 1L, topic2 -> 1 -> 0L))
   }
 
   it should "provide locks" in {
