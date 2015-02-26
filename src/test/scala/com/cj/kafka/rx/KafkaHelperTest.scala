@@ -8,18 +8,9 @@ class KafkaHelperTest extends FlatSpec with ShouldMatchers {
     val topic = "topic"
     val group = "consumer-group"
 
-    val path = KafkaHelper.getConsumerOffsetPath(topic, group)
+    val path = KafkaHelper.getPartitionPath(group, topic, 1)
 
-    path should be(s"/consumers/$group/offsets/$topic")
-  }
-
-  it should "extract partitions from zookeeper paths" in {
-    val expectedPartition = 1337
-
-    val path = KafkaHelper.getPartitionPath("/test/path", expectedPartition)
-    val partition = KafkaHelper.extractPartition(path)
-
-    partition should be(expectedPartition)
+    path should be(s"/consumers/$group/offsets/$topic/1")
   }
 
 }

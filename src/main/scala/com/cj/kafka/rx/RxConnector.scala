@@ -1,17 +1,14 @@
 package com.cj.kafka.rx
 
-
 import kafka.consumer._
-import kafka.message.MessageAndMetadata
 import org.apache.curator.framework.imps.CuratorFrameworkState
 import org.apache.curator.framework.{CuratorFrameworkFactory, CuratorFramework}
 import org.apache.curator.retry.RetryUntilElapsed
 import rx.lang.scala.Observable
 
-class RxConnector(config: ConsumerConfig) {
+import com.cj.kafka.rx.KafkaHelper._
 
-  type KafkaIterable = Iterable[MessageAndMetadata[Array[Byte], Array[Byte]]]
-  type KafkaObservable = Observable[Message[Array[Byte]]]
+class RxConnector(config: ConsumerConfig) {
 
   def this(config: SimpleConfig) = this(KafkaHelper.getConsumerConfig(config))
   def this(zookeepers: String, group: String) = this(SimpleConfig(zookeepers, group))
@@ -20,7 +17,7 @@ class RxConnector(config: ConsumerConfig) {
   private var zkClient: CuratorFramework = null
 
   def getMessageStream(topic: String) = getMessageStreams(topic)(0)
-  def getMessageStreams(topic: String, numStreams: Int = 1): Seq[Observable[Message[Array[Byte]]]] = {
+  def getMessageStreams(topic: String, numStreams: Int = 1): Seq[KafkaObservable] = {
     connect()
     val kafkaStreams: Seq[KafkaStream[Array[Byte], Array[Byte]]] = kafkaClient.createMessageStreamsByFilter(new Whitelist(topic), numStreams = numStreams)
     if (config.autoCommitEnable) {
@@ -40,9 +37,9 @@ class RxConnector(config: ConsumerConfig) {
   }
 
   protected[rx] def getObservableStream(stream: KafkaIterable, zk: OffsetCommitter): KafkaObservable = {
-    val manager: OffsetManager[Array[Byte]] = new OffsetManager(commit = zk.commit)
-
-    getObservableStream(stream)
+    val manager = new OffsetManager(commit = zk.commit)
+    Observable
+      .from(stream)
       .map(manager.check)
       .filter(_.isDefined)
       .map(_.get)

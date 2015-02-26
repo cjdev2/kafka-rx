@@ -5,17 +5,25 @@ import java.util.Properties
 import kafka.consumer.ConsumerConfig
 import kafka.message.MessageAndMetadata
 import org.apache.curator.utils.ZKPaths
+import rx.lang.scala.Observable
 
 object KafkaHelper {
 
-  def extractPartition(path: String): Int = {
-    val part = ZKPaths.getNodeFromPath(path)
-    Integer.parseInt(part)
-  }
+  type TopicPartition = (String, Int)
+  type OffsetMap = Map[TopicPartition, Long]
+  type KafkaIterable = Iterable[MessageAndMetadata[Array[Byte], Array[Byte]]]
+  type KafkaObservable = Observable[Message[Array[Byte]]]
 
-  def getPartitionPath(base: String, part: Int) = ZKPaths.makePath(base, part.toString)
+  type Correction = OffsetMap => OffsetMap
+  type Rebalance = (OffsetMap, OffsetMap) => OffsetMap
+  type Checkpoint = (OffsetMap, Correction) => OffsetMap
+  type Commit = (OffsetMap, Correction, Rebalance) => OffsetMap
 
-  def getConsumerOffsetPath(topic: String, group: String) = s"/consumers/$group/offsets/$topic"
+  // simple analog to kafka's ConsumerConfig
+  case class SimpleConfig(zookeepers: String, group: String, autocommit: Boolean = false, startFromLatest: Boolean = false)
+
+  def getPartitionPath(group: String, topic: String, part: Int) =
+    ZKPaths.makePath(s"/consumers/$group/offsets/$topic", part.toString)
 
   def getConsumerConfig(config: SimpleConfig) = {
     val props = new Properties()
@@ -28,6 +36,10 @@ object KafkaHelper {
 
   def copyMessage(message: MessageAndMetadata[Array[Byte], Array[Byte]]): Message[Array[Byte]] = {
     Message(value=message.message(), topic=message.topic, partition=message.partition, offset=message.offset)
+  }
+  
+  def copyMessage(message: MessageAndMetadata[Array[Byte], Array[Byte]], offsets: OffsetMap, checkpoint: Checkpoint) = {
+    Message(value = message.message(), topic = message.topic, partition = message.partition, offset = message.offset, offsets = offsets, checkpointWith = checkpoint)
   }
 
 }

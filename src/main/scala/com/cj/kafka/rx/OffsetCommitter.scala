@@ -7,11 +7,9 @@ import org.apache.curator.utils.ZKPaths
 import scala.collection.JavaConversions._
 
 import org.apache.curator.framework.recipes.locks.{InterProcessLock, InterProcessMutex}
-import MessageHelper._
+import KafkaHelper._
 
 class OffsetCommitter(group: String, zk: CuratorFramework) {
-
-  def offsetBasePath(topic:String) = KafkaHelper.getConsumerOffsetPath(topic, group)
 
   def start() = {
     if (zk.getState != CuratorFrameworkState.STARTED) {
@@ -25,7 +23,7 @@ class OffsetCommitter(group: String, zk: CuratorFramework) {
   def getOffsets(topicPartitions: Iterable[TopicPartition]): OffsetMap = {
      topicPartitions.flatMap { topicPartition =>
        val (topic, partition) = topicPartition
-       val path = KafkaHelper.getPartitionPath(offsetBasePath(topic), partition)
+       val path = KafkaHelper.getPartitionPath(group, topic, partition)
        Option(zk.checkExists.forPath(path)) match {
          case None => List()
          case Some(filestats) =>
@@ -40,7 +38,7 @@ class OffsetCommitter(group: String, zk: CuratorFramework) {
   def setOffsets(offsets: OffsetMap): OffsetMap = {
     offsets foreach { case (topicPartition, offset) =>
       val (topic,partition) = topicPartition
-      val nodePath = KafkaHelper.getPartitionPath(offsetBasePath(topic), partition)
+      val nodePath = KafkaHelper.getPartitionPath(group, topic, partition)
       val bytes = offset.toString.getBytes(Charsets.UTF_8)
       Option(zk.checkExists.forPath(nodePath)) match {
         case None =>
@@ -77,12 +75,10 @@ class OffsetCommitter(group: String, zk: CuratorFramework) {
     }
   }
 
-  def commit(manager: OffsetManager[Array[Byte]], offsets: OffsetMap, callback: CommitHook): OffsetMap = {
+  def commit(offsets: OffsetMap, correct: Correction, rebalance: Rebalance): OffsetMap = {
     withPartitionLocks(offsets.keys) {
       val zkOffsets = getOffsets(offsets.keys)
-      callback(zkOffsets)
-      val adjustedOffsets = manager.adjustOffsets(zkOffsets, offsets)
-      setOffsets(adjustedOffsets)
+      setOffsets(rebalance(zkOffsets, correct(zkOffsets)))
     }
   }
 

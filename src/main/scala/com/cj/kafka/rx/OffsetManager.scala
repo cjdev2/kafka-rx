@@ -1,36 +1,25 @@
 package com.cj.kafka.rx
 
-import MessageHelper._
+import KafkaHelper._
+import kafka.message.MessageAndMetadata
 
-class OffsetManager[T](
-  commit: (OffsetManager[T], OffsetMap, CommitHook) => OffsetMap =
-    (self: OffsetManager[T], offsets: OffsetMap, callback: CommitHook) => Map[TopicPartition, Long]()) {
+class OffsetManager(commit: Commit = (_,_,_) => Map[TopicPartition, Long]()) {
 
   // Offset Manager keeps track of offsets per partition for a particular kafka stream
-
   private var currentOffsets = Map[TopicPartition, Long]()
+  def getOffsets: OffsetMap = currentOffsets
 
-  def check(message: Message[T]): Option[Message[T]] = {
+  def check(message: MessageAndMetadata[Array[Byte], Array[Byte]]): Option[Message[Array[Byte]]] = {
     // updates internal offset state & determines whether the message is stale due to replay
-    currentOffsets.get(message.topicPartition) match {
-      case None => setOffsets(message)
+    currentOffsets.get(message.topic -> message.partition) match {
+      case None => manageMessage(message)
       case Some(priorOffset) =>
-        if (message.offset > priorOffset) setOffsets(message)
+        if (message.offset > priorOffset) manageMessage(message)
         else None
     }
   }
 
-  def checkpoint(offsets: OffsetMap, callback: CommitHook) = commit(this, offsets, callback)
-
-  private def setOffsets(message: Message[T]): Some[Message[T]] = {
-    currentOffsets += message.topicPartition -> message.offset
-    Some(message.copy(offsets = currentOffsets, callback = this.checkpoint))
-  }
-
-  def getOffsets: OffsetMap = currentOffsets
-
-  def adjustOffsets(externalOffsets: OffsetMap): OffsetMap = adjustOffsets(externalOffsets, getOffsets)
-  def adjustOffsets(externalOffsets: OffsetMap, internalOffsets: OffsetMap): OffsetMap = {
+  def rebalanceOffsets(externalOffsets: OffsetMap, internalOffsets: OffsetMap): OffsetMap = {
     // kafka rebalancing can cause skewed views of partition ownership
     // by reconciling our offsets with another view, we can determine which we have ownership over
     currentOffsets = currentOffsets.filter { case (topicPartition, offset) =>
@@ -44,4 +33,14 @@ class OffsetManager[T](
     }
   }
 
+  def balancedCommit(offsets: OffsetMap, correction: Correction): OffsetMap = {
+    commit(offsets, correction, rebalanceOffsets)
+  }
+
+  private def manageMessage(msg: MessageAndMetadata[Array[Byte], Array[Byte]]): Some[Message[Array[Byte]]] = {
+    val message = KafkaHelper.copyMessage(msg, currentOffsets, balancedCommit)
+    currentOffsets += message.topicPartition -> message.offset
+    Some(message)
+  }
+  
 }
