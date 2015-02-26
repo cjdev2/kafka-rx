@@ -15,7 +15,7 @@ object KafkaHelper {
   type KafkaObservable = Observable[Message[Array[Byte]]]
 
   type OffsetMerge = (OffsetMap, OffsetMap) => OffsetMap
-  type Checkpoint = (OffsetMap, OffsetMerge) => OffsetMap
+  type PartialCommit = (OffsetMap, OffsetMerge) => OffsetMap
   type Commit = (OffsetMap, OffsetMerge, OffsetMerge) => OffsetMap
 
   // simple analog to kafka's ConsumerConfig
@@ -37,8 +37,8 @@ object KafkaHelper {
     Message(value=message.message(), topic=message.topic, partition=message.partition, offset=message.offset)
   }
   
-  def copyMessage(message: MessageAndMetadata[Array[Byte], Array[Byte]], offsets: OffsetMap, checkpoint: Checkpoint) = {
-    Message(value = message.message(), topic = message.topic, partition = message.partition, offset = message.offset, offsets = offsets, checkpointWith = checkpoint)
+  def copyMessage(message: MessageAndMetadata[Array[Byte], Array[Byte]], offsets: OffsetMap, checkpoint: PartialCommit) = {
+    Message(value = message.message(), topic = message.topic, partition = message.partition, offset = message.offset, offsets = offsets, commitWith = checkpoint)
   }
 
 }

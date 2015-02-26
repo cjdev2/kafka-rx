@@ -123,11 +123,11 @@ class OffsetManagerTest extends FlatSpec with ShouldMatchers {
       Map[TopicPartition, Long]()
     }
 
-    val message = Message(value="test".getBytes, topic="test-topic", partition=0, offset=0L, checkpointWith=failingFn)
+    val message = Message(value="test".getBytes, topic="test-topic", partition=0, offset=0L, commitWith=failingFn)
     val manager = new OffsetManager(commit=passingFn)
 
     val checkedMessage = manager.check(message.kafkaMessage)
-    checkedMessage.get.checkpoint() // should not call the failingFn, since the offset manager should have provided the passingFn
+    checkedMessage.get.commit() // should not call the failingFn, since the offset manager should have provided the passingFn
   }
 
 }

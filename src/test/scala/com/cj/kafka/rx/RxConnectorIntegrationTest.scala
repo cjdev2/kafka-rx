@@ -60,7 +60,7 @@ class RxConnectorIntegrationTest extends FlatSpec with ShouldMatchers with Befor
         message.copy(value = message.offset)
       }
       val messages = stream.toBlocking.toList
-      messages.last.checkpoint()
+      messages.last.commit()
       val adjustedOffsets = messages.last.offsets map { case (topicPartition, offset) =>
         topicPartition -> (offset + 1)
       }
