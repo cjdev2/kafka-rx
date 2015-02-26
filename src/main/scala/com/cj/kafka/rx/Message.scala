@@ -10,11 +10,11 @@ case class Message[T](
   partition: Int,
   offset: Long,
   offsets: OffsetMap = Map[TopicPartition, Long](),
-  checkpointWith: Checkpoint = { case (x, fn) => fn(x); x } ) {
+  checkpointWith: Checkpoint = { case (x, fn) => fn(x,x); x } ) {
 
   val topicPartition = topic -> partition
 
-  def checkpoint(fn: Correction = x => offsets): OffsetMap = checkpointWith(offsets, fn)
+  def checkpoint(fn: OffsetMerge = (_,_) => offsets): OffsetMap = checkpointWith(offsets, fn)
 
   override def equals(other: Any) = {
     other match {

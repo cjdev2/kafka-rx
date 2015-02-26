@@ -75,10 +75,11 @@ class OffsetCommitter(group: String, zk: CuratorFramework) {
     }
   }
 
-  def commit(offsets: OffsetMap, correct: Correction, rebalance: Rebalance): OffsetMap = {
+  def commit(offsets: OffsetMap, userMerge: OffsetMerge, managerMerge: OffsetMerge): OffsetMap = {
     withPartitionLocks(offsets.keys) {
       val zkOffsets = getOffsets(offsets.keys)
-      setOffsets(rebalance(zkOffsets, correct(zkOffsets)))
+      val userReconciledOffsets: OffsetMap = userMerge(zkOffsets, offsets)
+      setOffsets(managerMerge(zkOffsets, userReconciledOffsets))
     }
   }
 

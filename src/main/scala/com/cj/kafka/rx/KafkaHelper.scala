@@ -14,10 +14,9 @@ object KafkaHelper {
   type KafkaIterable = Iterable[MessageAndMetadata[Array[Byte], Array[Byte]]]
   type KafkaObservable = Observable[Message[Array[Byte]]]
 
-  type Correction = OffsetMap => OffsetMap
-  type Rebalance = (OffsetMap, OffsetMap) => OffsetMap
-  type Checkpoint = (OffsetMap, Correction) => OffsetMap
-  type Commit = (OffsetMap, Correction, Rebalance) => OffsetMap
+  type OffsetMerge = (OffsetMap, OffsetMap) => OffsetMap
+  type Checkpoint = (OffsetMap, OffsetMerge) => OffsetMap
+  type Commit = (OffsetMap, OffsetMerge, OffsetMerge) => OffsetMap
 
   // simple analog to kafka's ConsumerConfig
   case class SimpleConfig(zookeepers: String, group: String, autocommit: Boolean = false, startFromLatest: Boolean = false)

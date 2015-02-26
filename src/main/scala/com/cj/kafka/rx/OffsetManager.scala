@@ -33,8 +33,8 @@ class OffsetManager(commit: Commit = (_,_,_) => Map[TopicPartition, Long]()) {
     }
   }
 
-  def balancedCommit(offsets: OffsetMap, correction: Correction): OffsetMap = {
-    commit(offsets, correction, rebalanceOffsets)
+  def balancedCommit(offsets: OffsetMap, userMerge: OffsetMerge): OffsetMap = {
+    commit(offsets, userMerge, rebalanceOffsets)
   }
 
   private def manageMessage(msg: MessageAndMetadata[Array[Byte], Array[Byte]]): Some[Message[Array[Byte]]] = {

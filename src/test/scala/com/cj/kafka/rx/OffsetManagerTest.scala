@@ -113,12 +113,12 @@ class OffsetManagerTest extends FlatSpec with ShouldMatchers {
 
   it should "provide its checkpoint function to all the messages" in {
 
-    val failingFn = { (_: OffsetMap, _: Correction) =>
+    val failingFn = { (_: OffsetMap, _: OffsetMerge) =>
       throw new RuntimeException("This function should never be called")
       Map[TopicPartition, Long]()
     }
 
-    val passingFn = { (_: OffsetMap, _ :Correction, _: Rebalance) =>
+    val passingFn = { (_: OffsetMap, _ :OffsetMerge, _: OffsetMerge) =>
       "this function should pass".split(" ") should contain("pass")
       Map[TopicPartition, Long]()
     }

@@ -151,7 +151,7 @@ class OffsetCommitterIntegrationTest extends FlatSpec with ShouldMatchers with B
 
     zk.setOffsets(offsets)
 
-    zk.commit(otherOffsets, { zkOffsets =>
+    zk.commit(otherOffsets, { (zkOffsets, messageOffsets) =>
       zkOffsets should be(offsets)
       offsets
     }, mgr.rebalanceOffsets)
