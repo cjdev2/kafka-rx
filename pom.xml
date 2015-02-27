@@ -13,8 +13,8 @@
 
 
     <groupId>com.cj</groupId>
-    <artifactId>kafka-rx_${scala.version}</artifactId>
-    <version>0.1.0</version>
+    <artifactId>kafka-rx_2.10</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
 
     <properties>
         <scala.version>2.10</scala.version>
@@ -145,5 +145,29 @@
 
         </plugins>
     </build>
+
+    <!-- BEGIN: STUFF REQUIRED BY THE CENTRAL REPO -->
+    <description>reactive kafka consumer</description>
+    <url>https://github.com/cjdev/kafka-rx</url>
+    <licenses>
+        <license>
+            <name>Eclipse Public License - v 1.0</name>
+            <url>https://www.eclipse.org/legal/epl-v10.html</url>
+        </license>
+    </licenses>
+    <scm>
+        <connection>scm:git:git@github.com:cjdev/kafka-rx.git</connection>
+        <url>scm:git:git@github.com:cjdev/kafka-rx.git</url>
+        <developerConnection>scm:git:git@github.com:cjdev/kafka-rx.git</developerConnection>
+        <tag>HEAD</tag>
+    </scm>
+    <developers>
+        <developer>
+            <id>tomans</id>
+            <name>Thomas Omans</name>
+            <email>tomans@cj.com</email>
+        </developer>
+    </developers>
+    <!--   END: STUFF REQUIRED BY THE CENTRAL REPO -->
 
 </project>
