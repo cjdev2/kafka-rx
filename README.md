@@ -1,5 +1,12 @@
 # kafka-rx [![Build Status](https://travis-ci.org/cjdev/kafka-rx.svg)](https://travis-ci.org/cjdev/kafka-rx)
-Horizontally Scalable, General Purpose Kafka Consumer that Just Behaves
+General Purpose Kafka Consumer that Just Behaves
+
+#### Features
+
+- thin adapter around kafka's high level api
+- per message, fine grained commits semantics
+- offset tracking for rebalancing and replay supression
+- push based api using rx-scala observables
 
 #### Subscribing to a message stream:
 
