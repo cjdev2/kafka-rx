@@ -64,6 +64,9 @@
     </dependencies>
 
     <build>
+        <sourceDirectory>${basedir}/src/main/scala</sourceDirectory>
+        <testSourceDirectory>${basedir}/src/test/scala</testSourceDirectory>
+
         <outputDirectory>target/scala-${scala.version}/classes</outputDirectory>
         <testOutputDirectory>target/scala-${scala.version}/test-classes</testOutputDirectory>
         <plugins>
