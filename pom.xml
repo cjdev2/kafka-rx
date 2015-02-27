@@ -70,12 +70,6 @@
         <outputDirectory>target/scala-${scala.version}/classes</outputDirectory>
         <testOutputDirectory>target/scala-${scala.version}/test-classes</testOutputDirectory>
         <plugins>
-            <plugin>
-                <artifactId>maven-javadoc-plugin</artifactId>
-                <configuration>
-                    <skip>true</skip>
-                </configuration>
-            </plugin>
             <!-- disable surefire -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -125,8 +119,7 @@
                         </goals>
                     </execution>
                     <execution>
-                        <id>attach-scaladocs</id>
-                        <phase>verify</phase>
+                        <id>attach-javadocs</id>
                         <goals>
                             <goal>doc-jar</goal>
                         </goals>
