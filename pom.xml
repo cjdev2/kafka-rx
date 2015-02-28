@@ -12,7 +12,7 @@
 
     <groupId>com.cj</groupId>
     <artifactId>kafka-rx_2.10</artifactId>
-    <version>0.1.0</version>
+    <version>0.1.1-SNAPSHOT</version>
 
     <properties>
         <scala.version>2.10</scala.version>
