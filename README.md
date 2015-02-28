@@ -6,7 +6,7 @@ General Purpose Kafka Consumer that Just Behaves
 - thin adapter around kafka's high level api
 - per message, fine grained commits semantics
 - offset tracking for rebalancing and replay supression
-- push based api using rx-scala observables
+- reactive api using rx-scala observables
 
 #### Subscribing to a message stream:
 
@@ -42,7 +42,7 @@ stream.buffer(23).foreach { bucket =>
 }
 ```
 
-If you can afford possible gaps in message processing you can also use kafka's automatic offset commit behavior.
+If you can afford possible gaps in message processing you can also use kafka's automatic offset commit behavior, but you are encouraged to manage commits yourself.
 
 #### Configuration
 
@@ -73,8 +73,14 @@ From sbt:
 libraryDependencies += "com.cj" % "kafka-rx_2.10" % "0.1.0"
 ```
 
+For more code and help getting started, check out the [examples](examples/).
+
 #### Contributing
 
-Have an improvement or something you want to discuss?
+Have a question, improvement, or something you want to discuss?
 
-Tickets and pull requests welcome!
+Issues and pull requests welcome!
+
+#### License
+
+Eclipse Public License v.1 - Commission Junction 2015
