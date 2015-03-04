@@ -5,7 +5,7 @@ import scala.concurrent.duration._
 
 object FileWriterConsumer extends App {
 
-  val conn = new RxConnector("zookeeper:2181", "consumer-group")
+  val conn = new RxConnector("localhost:2181", "file-writer")
 
   // kafka rx job to write messages on all topics to disk
   conn.getMessageStream(".*")
@@ -22,6 +22,7 @@ object FileWriterConsumer extends App {
             // and simply write our file
             val file = getFile(topicPartition, messages.head.offset)
             for (message <- messages) writeToFile(file, message.value, appending=true)
+            println("New file: " + file)
             messages.last.commit()
           }
       }

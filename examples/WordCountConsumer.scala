@@ -3,26 +3,29 @@ import scala.concurrent.duration._
 
 object WordCountConsumer extends App {
 
-  val conn = new RxConnector("zookeeper:2181", "consumer-group")
+  // streaming word count, try it out with the kafka quickstart:
+  // http://kafka.apache.org/documentation.html#quickstart
 
-  // our empty word count type
-  val empty = Map[String, Int]()
+  val conn = new RxConnector("localhost:2181", "word-counter")
 
-  val sentences = getStringStream("sentences")
+  val sentences = getStringStream("test")
 
   // if we split apart sentences we get words
-  val words = sentences.flatMapIterable(_.split("\\s+"))
+  val words = sentences.flatMapIterable { sentence =>
+    sentence.split("\\s+")
+  }
 
   // if we collect words we can calculate frequencies
-  val wordCounts = words.foldLeft(empty) { (counts, word) =>
-    counts.updated(word, counts.getOrElse(word, 0) + 1)
+  val counts = words.scan(empty) { (counts, word) =>
+    counts + (word -> (counts(word) + 1))
   }
 
-  // sample once a second instead of once per update
-  wordCounts.sample(1 second).foreach(println)
+  // sample results once a second instead of once per update
+  counts.sample(1 second).foreach(println)
 
-  def getStringStream(topic: String) = {
+  def getStringStream(topic: String) =
     conn.getMessageStream(topic).map(_.value).map(new String(_))
-  }
+
+  def empty = Map[String, Int]().withDefaultValue(0)
 
 }
