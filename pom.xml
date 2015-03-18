@@ -11,12 +11,12 @@
 
 
     <groupId>com.cj</groupId>
-    <artifactId>kafka-rx_2.10</artifactId>
+    <artifactId>kafka-rx_2.11</artifactId>
     <version>0.1.1-SNAPSHOT</version>
 
     <properties>
-        <scala.version>2.10</scala.version>
-        <scala.compiler.version>2.10.4</scala.compiler.version>
+        <scala.compat.version>2.11</scala.compat.version>
+        <scala.compiler.version>2.11.6</scala.compiler.version>
         <surefire.version>2.4.3</surefire.version>
     </properties>
 
@@ -24,13 +24,13 @@
 
         <dependency>
             <groupId>org.apache.kafka</groupId>
-            <artifactId>kafka_${scala.version}</artifactId>
-            <version>0.8.2-beta</version>
+            <artifactId>kafka_${scala.compat.version}</artifactId>
+            <version>0.8.2.1</version>
         </dependency>
 
         <dependency>
             <groupId>io.reactivex</groupId>
-            <artifactId>rxscala_${scala.version}</artifactId>
+            <artifactId>rxscala_${scala.compat.version}</artifactId>
             <version>0.23.0</version>
         </dependency>
 
@@ -48,7 +48,7 @@
 
         <dependency>
             <groupId>org.scalatest</groupId>
-            <artifactId>scalatest_${scala.version}</artifactId>
+            <artifactId>scalatest_${scala.compat.version}</artifactId>
             <version>2.1.3</version>
             <scope>test</scope>
         </dependency>
@@ -65,8 +65,8 @@
         <sourceDirectory>${basedir}/src/main/scala</sourceDirectory>
         <testSourceDirectory>${basedir}/src/test/scala</testSourceDirectory>
 
-        <outputDirectory>target/scala-${scala.version}/classes</outputDirectory>
-        <testOutputDirectory>target/scala-${scala.version}/test-classes</testOutputDirectory>
+        <outputDirectory>target/scala-${scala.compat.version}/classes</outputDirectory>
+        <testOutputDirectory>target/scala-${scala.compat.version}/test-classes</testOutputDirectory>
         <plugins>
             <!-- disable surefire -->
             <plugin>

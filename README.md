@@ -62,15 +62,15 @@ From maven:
 ```xml
 <dependency>
   <groupId>com.cj</groupId>
-  <artifactId>kafka-rx_2.10</artifactId>
-  <version>0.1.0</version>
+  <artifactId>kafka-rx_2.11</artifactId>
+  <version>0.1.1-SNAPSHOT</version>
 </dependency>
 ```
 
 From sbt:
 
 ```scala
-libraryDependencies += "com.cj" % "kafka-rx_2.10" % "0.1.0"
+libraryDependencies += "com.cj" % "kafka-rx_2.11" % "0.1.1-SNAPSHOT"
 ```
 
 For more code and help getting started, check out the [examples](examples/).
