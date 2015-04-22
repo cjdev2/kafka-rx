@@ -38,9 +38,8 @@ class OffsetManager(commit: Commit = (_,_,_) => Map[TopicPartition, Long]()) {
   }
 
   private def manageMessage(msg: MessageAndMetadata[Array[Byte], Array[Byte]]): Some[Message[Array[Byte]]] = {
-    val message = KafkaHelper.copyMessage(msg, currentOffsets, partialCommit)
-    currentOffsets += message.topicPartition -> message.offset
-    Some(message)
+    currentOffsets += msg.topic -> msg.partition -> msg.offset
+    Some(KafkaHelper.copyMessage(msg, currentOffsets, partialCommit))
   }
-  
+
 }

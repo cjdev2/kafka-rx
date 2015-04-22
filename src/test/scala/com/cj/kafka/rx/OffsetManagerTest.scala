@@ -17,10 +17,11 @@ class OffsetManagerTest extends FlatSpec with ShouldMatchers {
     val message = Message(value="test message".getBytes, topic="test-topic", partition=0, offset=0L)
 
     // when
-    offsets.check(message.kafkaMessage)
+    val checkedMessage = offsets.check(message.kafkaMessage)
 
     // then
     offsets.getOffsets should be(Map(message.topicPartition -> message.offset))
+    checkedMessage.get.offsets should be(offsets.getOffsets)
   }
 
   it should "not record the same message twice" in {
