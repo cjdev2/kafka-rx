@@ -14,7 +14,7 @@ class OffsetManagerTest extends FlatSpec with ShouldMatchers {
   it should "record offsets for kafka messages" in {
     // given
     val offsets = new OffsetManager
-    val message = Message(value="test message".getBytes, topic="test-topic", partition=0, offset=0L)
+    val message = Message(value="test message".getBytes, topic="test-topic", partition=0, offset=1L)
 
     // when
     val checkedMessage = offsets.check(message.kafkaMessage)
