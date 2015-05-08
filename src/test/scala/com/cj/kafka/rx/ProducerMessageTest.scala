@@ -1,6 +1,6 @@
 package com.cj.kafka.rx
 
-import org.apache.kafka.clients.producer.MockProducer
+import org.apache.kafka.clients.producer.{RecordMetadata, MockProducer}
 import org.scalatest.{Matchers, BeforeAndAfter, FlatSpec}
 import rx.lang.scala.Observable
 
@@ -16,21 +16,22 @@ class ProducerMessageTest extends FlatSpec with Matchers with BeforeAndAfter {
             "http://two/include-me",
             "http://none/include",
             "http://none/include",
-            "http://three/include-me"
+            "http://three/Include-me"
         )
-
 
         val messages = urls.map(s => new Message[Array[Byte]](s.getBytes("UTF-8"), "", 0, 0, Map(), null))
         val stream = Observable.from(messages)
         val producer = new MockProducer()
 
-        val j = for {
-            message <- stream
-            if new String(message.value).toLowerCase.contains("/include-me")
-        } yield message.newCommittableProducerMessage("topic.name", message.value)
+        val j = stream.transform { m =>
+            new ProducerMessage[Array[Byte], Array[Byte]](key = Some(m.value), value = Some(m.value))
+        } filter { m =>
+            new String(m.value.get).toLowerCase.contains("/include-me")
+        }
 
-        j.saveToKafka(producer)
-          .foreach(println)
+        j.saveToKafka("topic.name")(producer).last.foreach { result =>
+            result.commit
+        }
 
         val history = producer.history()
 
@@ -44,7 +45,7 @@ class ProducerMessageTest extends FlatSpec with Matchers with BeforeAndAfter {
         }.toSet shouldBe Set(
             "http://one/include-me",
             "http://two/include-me",
-            "http://three/include-me"
+            "http://three/Include-me"
         )
     }
 }

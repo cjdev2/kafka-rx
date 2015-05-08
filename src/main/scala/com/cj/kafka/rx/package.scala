@@ -36,27 +36,23 @@ package object rx {
     def transform[K, V](fn: Message[T] => ProducerMessage[K, V]): Observable[ProducerMessage[K, V]] = stream map fn
   }
 
-  implicit def toProducerRecord[K, V](message: ProducerMessage[K, V]): ProducerRecord[K, V] = {
-    for {
-      key <- message.key.orNull
-      value <- message.value
-      partition <- message.partition.orNull
-      topic <- message.topic
-      if message.valid
-    } yield new ProducerRecord[K, V](topic, partition, key, value)
-  }
-
   implicit class ProducerObservable[K, V](stream: Observable[ProducerMessage[K, V]]) {
-    def saveToKafka(topic: String)(implicit producer: Producer[K, V]): Observable[(RecordMetadata, OffsetMerge => OffsetMap)] = {
-      stream.map { message =>
-        val m: ProducerMessage[K, V] = message.copy(topic = Some(topic))
-        m
-      } map { message =>
-        val metadata: RecordMetadata = producer.send(message).get()
-        val function = message.commit
-        (metadata, function)
-      }
+    private[rx] def toProducerRecord[K, V](message: ProducerMessage[K, V]): ProducerRecord[K, V] = {
+      val topic: String = message.topic.get
+      val partition: Int = message.partition.getOrElse(null).asInstanceOf[Int]
+      val key: K = message.key.getOrElse(null).asInstanceOf[K]
+      val value: V = message.value.get
+      new ProducerRecord[K, V](topic, partition, key, value)
+    }
 
+    def saveToKafka(topic: String)(implicit producer: Producer[K, V]): Observable[ProducerResult] = {
+      stream.map { message =>
+        message.copy(topic = Some(topic)).asInstanceOf[ProducerMessage[K, V]]
+      } map { message =>
+          val metadata: RecordMetadata = producer.send(toProducerRecord(message)).get()
+          val function = message.commit
+          ProducerResult(metadata, function)
+      }
     }
     def transform[K2, V2](fn: ProducerMessage[K, V] => ProducerMessage[K2, V2]) = stream map fn
   }

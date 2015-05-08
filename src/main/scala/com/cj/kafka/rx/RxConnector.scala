@@ -8,7 +8,7 @@ import rx.lang.scala.Observable
 
 class RxConnector(config: ConsumerConfig) {
 
-  def this(config: SimpleConfig) = this(getConsumerConfig(config))
+  def this(config: SimpleConfig) = this(config.getConsumerConfig)
   def this(zookeepers: String, group: String) = this(SimpleConfig(zookeepers, group))
   
   private var kafkaClient: ConsumerConnector = null
