@@ -50,14 +50,15 @@ object KafkaProducerExample extends App {
     val messages = urls.map(s => new Message[Array[Byte]](s.getBytes("UTF-8"), "", 0, 0, Map(), null))
     val stream = Observable.from(messages)
 
-    val j = for {
-        message <- stream
-        if new String(message.value).toLowerCase.contains("/placement-t")
-    } yield message.newCommittableProducerMessage("topic.name", message.value)
 
-    j.saveToKafka(producer).foreach(println)
-
-    j.foreach(onNext = {pr => println(new String(pr.value))})
+//    val j = for {
+//        message <- stream
+//        if new String(message.value).toLowerCase.contains("/placement-t")
+//    } yield message.newCommittableProducerMessage("topic.name", message.value)
+//
+//    j.saveToKafka(producer).foreach(println)
+//
+//    j.foreach(onNext = {pr => println(new String(pr.value))})
 
     private val producerRecords = producer.history()
 
