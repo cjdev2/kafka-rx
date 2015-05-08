@@ -1,14 +1,13 @@
-package com.cj.kafka.rx
+package com.cj.kafka
 
 import java.util.Properties
 
+import _root_.rx.lang.scala.Observable
 import kafka.consumer.ConsumerConfig
 import kafka.message.MessageAndMetadata
 import org.apache.curator.utils.ZKPaths
-import rx.lang.scala.Observable
 
-object KafkaHelper {
-
+package object rx {
   type TopicPartition = (String, Int)
   type OffsetMap = Map[TopicPartition, Long]
   type KafkaIterable = Iterable[MessageAndMetadata[Array[Byte], Array[Byte]]]
@@ -36,9 +35,8 @@ object KafkaHelper {
   def copyMessage(message: MessageAndMetadata[Array[Byte], Array[Byte]]): Message[Array[Byte]] = {
     Message(value=message.message(), topic=message.topic, partition=message.partition, offset=message.offset)
   }
-  
+
   def copyMessage(message: MessageAndMetadata[Array[Byte], Array[Byte]], offsets: OffsetMap, checkpoint: PartialCommit) = {
     Message(value = message.message(), topic = message.topic, partition = message.partition, offset = message.offset, offsets = offsets, commitWith = checkpoint)
   }
-
 }
