@@ -1,6 +1,5 @@
 package com.cj.kafka.rx
 
-import KafkaHelper._
 import kafka.message.MessageAndMetadata
 
 // alternate version of kafkas MessageAndMetadata class that tracks consumer offsets per message

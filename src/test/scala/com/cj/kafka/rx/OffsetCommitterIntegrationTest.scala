@@ -8,8 +8,6 @@ import org.apache.curator.utils.EnsurePath
 
 import scala.concurrent.duration._
 
-import KafkaHelper._
-
 import org.scalatest.{BeforeAndAfter, FlatSpec, ShouldMatchers}
 
 class OffsetCommitterIntegrationTest extends FlatSpec with ShouldMatchers with BeforeAndAfter {
@@ -40,7 +38,7 @@ class OffsetCommitterIntegrationTest extends FlatSpec with ShouldMatchers with B
     val zk = new OffsetCommitter("test", client)
     val topic = "test"
     val partition = 42
-    val path = KafkaHelper.getPartitionPath("test", "test", partition)
+    val path = getPartitionPath("test", "test", partition)
     val expectedOffset = 1337L
     val bytes = expectedOffset.toString.getBytes
     val expectedOffsets = Map[TopicPartition, Long](topic -> partition -> expectedOffset)
@@ -55,8 +53,8 @@ class OffsetCommitterIntegrationTest extends FlatSpec with ShouldMatchers with B
     val topic1 = "topic1"
     val topic2 = "topic2"
     val partition = 42
-    val path1 = KafkaHelper.getPartitionPath("test", topic1, partition)
-    val path2 = KafkaHelper.getPartitionPath("test", topic2, partition)
+    val path1 = getPartitionPath("test", topic1, partition)
+    val path2 = getPartitionPath("test", topic2, partition)
     val expectedOffset = 1337L
     val bytes = expectedOffset.toString.getBytes
     val expectedOffsets1 = Map[TopicPartition, Long](topic1 -> partition -> expectedOffset)
@@ -84,7 +82,7 @@ class OffsetCommitterIntegrationTest extends FlatSpec with ShouldMatchers with B
     val topic = "topic"
     val zk = new OffsetCommitter( "group", client)
     val partition = 1
-    val path = KafkaHelper.getPartitionPath("group", topic, partition)
+    val path = getPartitionPath("group", topic, partition)
 
     val offsets = Map[TopicPartition, Long](topic -> partition -> 42)
 
