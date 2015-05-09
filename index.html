@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="UTF-8">
+    <title>Kafka Rx by cjdev</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="stylesheets/normalize.css" media="screen">
+    <link href='http://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-light.css" media="screen">
+  </head>
+  <body>
+    <section class="page-header">
+      <h1 class="project-name">Kafka Rx</h1>
+      <h2 class="project-tagline">reactive kafka</h2>
+      <a href="https://github.com/cjdev/kafka-rx" class="btn">View on GitHub</a>
+      <a href="https://github.com/cjdev/kafka-rx/zipball/master" class="btn">Download .zip</a>
+      <a href="https://github.com/cjdev/kafka-rx/tarball/master" class="btn">Download .tar.gz</a>
+    </section>
+
+    <section class="main-content">
+      <h1>
+<a id="kafka-rx--" class="anchor" href="#kafka-rx--" aria-hidden="true"><span class="octicon octicon-link"></span></a>kafka-rx <a href="https://travis-ci.org/cjdev/kafka-rx"><img src="https://travis-ci.org/cjdev/kafka-rx.svg" alt="Build Status"></a> <a href="http://search.maven.org/#search%7Cgav%7C1%7Cg%3A%22com.cj%22%20AND%20a%3A%22kafka-rx_2.10%22"><img src="https://img.shields.io/maven-central/v/com.cj/kafka-rx_2.10.svg" alt="Maven Central"></a>
+</h1>
+
+<p>General Purpose Kafka Client that Just Behaves</p>
+
+<h4>
+<a id="features" class="anchor" href="#features" aria-hidden="true"><span class="octicon octicon-link"></span></a>Features</h4>
+
+<ul>
+<li>thin adapter around kafka's high level producer and consumer api</li>
+<li>per message, fine grained commits semantics</li>
+<li>offset tracking for local rebalancing and replay supression</li>
+<li>reactive api using rx-scala observables</li>
+</ul>
+
+<h4>
+<a id="subscribing-to-a-message-stream" class="anchor" href="#subscribing-to-a-message-stream" aria-hidden="true"><span class="octicon octicon-link"></span></a>Subscribing to a message stream:</h4>
+
+<p>kafka-rx provides a push alternative to kafka's pull-based iterable stream</p>
+
+<p>To connect to your zookeeper cluster and process kafka streams:</p>
+
+<div class="highlight highlight-scala"><pre><span class="pl-k">val</span> <span class="pl-en">connector</span> <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">RxConnector</span>(<span class="pl-s"><span class="pl-pds">"</span>zookeeper:2181<span class="pl-pds">"</span></span>, <span class="pl-s"><span class="pl-pds">"</span>consumer-group<span class="pl-pds">"</span></span>)
+
+connector.getMessageStream(<span class="pl-s"><span class="pl-pds">"</span>cool-topic-(x|y|z)<span class="pl-pds">"</span></span>)
+  .map(deserialize)
+  .take(<span class="pl-c1">42</span> seconds)
+  .foreach(println)
+
+connector.shutdown()</pre></div>
+
+<h4>
+<a id="producing-messages" class="anchor" href="#producing-messages" aria-hidden="true"><span class="octicon octicon-link"></span></a>Producing messages</h4>
+
+<p>kafka-rx can also be used to produce kafka streams</p>
+
+<div class="highlight highlight-scala"><pre>tweetStream.map(parse)
+  .groupBy(hashtag)
+  .foreach { (tag, subStream) <span class="pl-k">=&gt;</span>
+    subStream.map(toProducerRecord)
+      .saveToKafka(kafkaProducer, s<span class="pl-s"><span class="pl-pds">"</span>tweets.$tag<span class="pl-pds">"</span></span>)
+      .foreach { savedMessage <span class="pl-k">=&gt;</span>
+        savedMessage.commit() <span class="pl-c">// checkpoint position in the source stream</span>
+      }
+  }</pre></div>
+
+<p>Check out the <a href="examples/TopicTransformProducer.scala">words-to-WORDS</a> producer for a full working example.</p>
+
+<h4>
+<a id="reliable-message-processing" class="anchor" href="#reliable-message-processing" aria-hidden="true"><span class="octicon octicon-link"></span></a>Reliable Message Processing</h4>
+
+<p>kafka-rx was built with reliable message processing in mind</p>
+
+<p>To support this, every kafka-rx message has a <code>.commit()</code> method which optionally takes a user provided merge function, giving the program an opportunity to reconcile with zookeeper and manage delivery guarantees.</p>
+
+<div class="highlight highlight-scala"><pre>stream.buffer(<span class="pl-c1">23</span>).foreach { bucket <span class="pl-k">=&gt;</span>
+  bucket.last.commit { (zkOffsets, proposedOffsets) <span class="pl-k">=&gt;</span>
+    <span class="pl-k">if</span> (looksGood(zkOffsets)) proposedOffsets <span class="pl-c">// go ahead and commit!</span>
+    <span class="pl-k">else</span> zkOffsets <span class="pl-c">// or leave things as they were</span>
+    <span class="pl-c">// or something else...</span>
+  }
+}</pre></div>
+
+<p>If you can afford possible gaps in message processing you can also use kafka's automatic offset commit behavior, but you are encouraged to manage commits yourself.</p>
+
+<p>In general you should aim for idempotent processing, where it is no different to process a message once or many times. In addition, remember that messages are delivered across different topic partitions in a non-deterministic order. If this is important you are encouraged to process each topic partition as an individual stream to ensure there is no interleaving.</p>
+
+<div class="highlight highlight-scala"><pre><span class="pl-k">val</span> <span class="pl-en">numStreams</span> <span class="pl-k">=</span> numPartitions
+<span class="pl-k">val</span> <span class="pl-en">streams</span> <span class="pl-k">=</span> conn.getMessageStreams(topic, numStreams)</pre></div>
+
+<h4>
+<a id="configuration" class="anchor" href="#configuration" aria-hidden="true"><span class="octicon octicon-link"></span></a>Configuration</h4>
+
+<p>This and other consumer configuration can be provided through kafka's <code>ConsumerConfig</code>.</p>
+
+<div class="highlight highlight-scala"><pre><span class="pl-k">val</span> <span class="pl-en">conf</span> <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">ConsumerConfig</span>(myProperties)
+<span class="pl-k">val</span> <span class="pl-en">conn</span> <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">RxConnector</span>(conf)</pre></div>
+
+<h4>
+<a id="including-in-your-project" class="anchor" href="#including-in-your-project" aria-hidden="true"><span class="octicon octicon-link"></span></a>Including in your project</h4>
+
+<p>Currently kafka-rx is built against kafka 0.8.2.1 and scala 2.11, but should work fine with other similar versions.</p>
+
+<p>From maven:</p>
+
+<div class="highlight highlight-xml"><pre>&lt;<span class="pl-ent">dependency</span>&gt;
+  &lt;<span class="pl-ent">groupId</span>&gt;com.cj&lt;/<span class="pl-ent">groupId</span>&gt;
+  &lt;<span class="pl-ent">artifactId</span>&gt;kafka-rx_2.11&lt;/<span class="pl-ent">artifactId</span>&gt;
+  &lt;<span class="pl-ent">version</span>&gt;0.2.0-SNAPSHOT&lt;/<span class="pl-ent">version</span>&gt;
+&lt;/<span class="pl-ent">dependency</span>&gt;</pre></div>
+
+<p>From sbt:</p>
+
+<div class="highlight highlight-scala"><pre>libraryDependencies <span class="pl-k">+</span><span class="pl-k">=</span> <span class="pl-s"><span class="pl-pds">"</span>com.cj<span class="pl-pds">"</span></span> <span class="pl-k">%</span> <span class="pl-s"><span class="pl-pds">"</span>kafka-rx<span class="pl-pds">"</span></span> <span class="pl-k">%</span> <span class="pl-s"><span class="pl-pds">"</span>0.2.0-SNAPSHOT<span class="pl-pds">"</span></span></pre></div>
+
+<p>For more code and help getting started, see the <a href="examples/">examples</a>.</p>
+
+<h4>
+<a id="contributing" class="anchor" href="#contributing" aria-hidden="true"><span class="octicon octicon-link"></span></a>Contributing</h4>
+
+<p>Have a question, improvement, or something you want to discuss?</p>
+
+<p>Issues and pull requests welcome!</p>
+
+<h4>
+<a id="license" class="anchor" href="#license" aria-hidden="true"><span class="octicon octicon-link"></span></a>License</h4>
+
+<p>Eclipse Public License v.1 - Commission Junction 2015</p>
+
+      <footer class="site-footer">
+        <span class="site-footer-owner"><a href="https://github.com/cjdev/kafka-rx">Kafka Rx</a> is maintained by <a href="https://github.com/cjdev">cjdev</a>.</span>
+
+        <span class="site-footer-credits">This page was generated by <a href="https://pages.github.com">GitHub Pages</a> using the <a href="https://github.com/jasonlong/cayman-theme">Cayman theme</a> by <a href="https://twitter.com/jasonlong">Jason Long</a>.</span>
+      </footer>
+
+    </section>
+
+  
+  </body>
+</html>
+
