@@ -1,12 +1,12 @@
 # kafka-rx [![Build Status](https://travis-ci.org/cjdev/kafka-rx.svg)](https://travis-ci.org/cjdev/kafka-rx) [![Maven Central](https://img.shields.io/maven-central/v/com.cj/kafka-rx_2.10.svg)](http://search.maven.org/#search%7Cgav%7C1%7Cg%3A%22com.cj%22%20AND%20a%3A%22kafka-rx_2.10%22)
 
-General Purpose Kafka Consumer that Just Behaves
+General Purpose Kafka Client that Just Behaves
 
 #### Features
 
-- thin adapter around kafka's high level api
+- thin adapter around kafka's high level producer and consumer api
 - per message, fine grained commits semantics
-- offset tracking for rebalancing and replay supression
+- offset tracking for local rebalancing and replay supression
 - reactive api using rx-scala observables
 
 #### Subscribing to a message stream:
@@ -18,7 +18,7 @@ To connect to your zookeeper cluster and process kafka streams:
 ```scala
 val connector = new RxConnector("zookeeper:2181", "consumer-group")
 
-connector.getObservableStream("cool-topic-(x|y|z)")
+connector.getMessageStream("cool-topic-(x|y|z)")
   .map(deserialize)
   .take(42 seconds)
   .foreach(println)
@@ -28,18 +28,23 @@ connector.shutdown()
 
 #### Producing messages
 
-kafka-rx can also be used to transform streams, putting the original back into kafka
+kafka-rx can also be used to produce kafka streams
 
 ```scala
-stream.map(parse).groupBy(interesting).foreach { (id, group) =>
-  val topic = s"group-$id"
-  group.saveToKafka(kafkaProducer, topic).foreach(_.commit)
-}
+tweetStream.map(parse)
+  .groupBy(hashtag)
+  .foreach { (tag, subStream) =>
+    subStream.map(toProducerRecord)
+      .saveToKafka(kafkaProducer, s"tweets.$tag")
+      .foreach { savedMessage =>
+        savedMessage.commit() // checkpoint position in the source stream
+      }
+  }
 ```
 
 Check out the [words-to-WORDS](examples/TopicTransformProducer.scala) producer for a full working example.
 
-#### Committing offset positions
+#### Reliable Message Processing
 
 kafka-rx was built with reliable message processing in mind
 
@@ -57,6 +62,13 @@ stream.buffer(23).foreach { bucket =>
 
 If you can afford possible gaps in message processing you can also use kafka's automatic offset commit behavior, but you are encouraged to manage commits yourself.
 
+In general you should aim for idempotent processing, where it is no different to process a message once or many times. In addition, remember that messages are delivered across different topic partitions in a non-deterministic order. If this is important you are encouraged to process each topic partition as an individual stream to ensure there is no interleaving.
+
+```scala
+val numStreams = numPartitions
+val streams = conn.getMessageStreams(topic, numStreams)
+```
+
 #### Configuration
 
 This and other consumer configuration can be provided through kafka's `ConsumerConfig`.
@@ -68,7 +80,7 @@ val conn = new RxConnector(conf)
 
 #### Including in your project
 
-Currently kafka-rx is built against kafka 0.8.2-beta and scala 2.10, but should work fine with other similar versions.
+Currently kafka-rx is built against kafka 0.8.2.1 and scala 2.11, but should work fine with other similar versions.
 
 From maven:
 
@@ -86,7 +98,7 @@ From sbt:
 libraryDependencies += "com.cj" % "kafka-rx" % "0.2.0-SNAPSHOT"
 ```
 
-For more code and help getting started, check out the [examples](examples/).
+For more code and help getting started, see the [examples](examples/).
 
 #### Contributing
 
