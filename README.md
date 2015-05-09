@@ -53,11 +53,8 @@ To support this, every kafka-rx message has a `.commit()` method which optionall
 
 ```scala
 stream.buffer(23).foreach { bucket =>
-  bucket.last.commit { (zkOffsets, proposedOffsets) =>
-    if (looksGood(zkOffsets)) proposedOffsets // go ahead and commit!
-    else zkOffsets // or leave things as they were
-    // or something else...
-  }
+  process(bucket)
+  bucket.last.commit()
 }
 ```
 
@@ -72,12 +69,9 @@ val streams = conn.getMessageStreams(topic, numStreams)
 
 #### Configuration
 
-This and other consumer configuration can be provided through kafka's `ConsumerConfig`.
+Wherever possible, kafka-rx delegates to kafka's internal configuration.
 
-```scala
-val conf = new ConsumerConfig(myProperties)
-val conn = new RxConnector(conf)
-```
+Use kafka's `ConsumerConfig` for configuring the consumer, and `ProducerConfig` for configuring your producer.
 
 #### Including in your project
 
@@ -99,7 +93,13 @@ From sbt:
 libraryDependencies += "com.cj" % "kafka-rx" % "0.2.0-SNAPSHOT"
 ```
 
+#### Videos & Examples
+
 For more code and help getting started, see the [examples](examples/).
+
+Or, if videos are more your style:
+
+[![stream processing with kafka-rx](http://img.youtube.com/vi/S-Ynyel9pkk/0.jpg)](http://www.youtube.com/watch?v=S-Ynyel9pkk)
 
 #### Contributing
 
