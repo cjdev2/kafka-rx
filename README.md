@@ -20,12 +20,24 @@ val connector = new RxConnector("zookeeper:2181", "consumer-group")
 
 connector.getObservableStream("cool-topic-(x|y|z)")
   .map(deserialize)
-  .filter(interesting)
   .take(42 seconds)
   .foreach(println)
 
 connector.shutdown()
 ```
+
+#### Producing messages
+
+kafka-rx can also be used to transform streams, putting the original back into kafka
+
+```scala
+stream.map(parse).groupBy(interesting).foreach { (id, group) =>
+  val topic = s"group-$id"
+  group.saveToKafka(kafkaProducer, topic).foreach(_.commit)
+}
+```
+
+Check out the [words-to-WORDS](examples/TopicTransformProducer.scala) producer for a full working example.
 
 #### Committing offset positions
 
@@ -35,8 +47,8 @@ To support this, every kafka-rx message has a `.commit()` method which optionall
 
 ```scala
 stream.buffer(23).foreach { bucket =>
-  bucket.last.commit { (zkOffsets, offsets) =>
-    if (looksGood(zkOffsets)) offsets // go ahead and commit!
+  bucket.last.commit { (zkOffsets, proposedOffsets) =>
+    if (looksGood(zkOffsets)) proposedOffsets // go ahead and commit!
     else zkOffsets // or leave things as they were
     // or something else...
   }
