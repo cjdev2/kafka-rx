@@ -2,13 +2,13 @@ package com.cj.kafka.rx
 
 import kafka.message.MessageAndMetadata
 
-class OffsetManager(commit: Commit = (_,_,_) => Map[TopicPartition, Long]()) {
+class OffsetManager[K, V](commit: Commit = (_,_,_) => Map[TopicPartition, Long]()) {
 
   // Offset Manager keeps track of offsets per partition for a particular kafka stream
   private var currentOffsets = Map[TopicPartition, Long]()
   def getOffsets: OffsetMap = currentOffsets
 
-  def check(message: KafkaMessage): Option[RxMessage] = {
+  def check(message: MessageAndMetadata[K, V]): Option[Message[K, V]] = {
     // updates internal offset state & determines whether the message is stale due to replay
     currentOffsets.get(message.topic -> message.partition) match {
       case None => manageMessage(message)
@@ -36,7 +36,7 @@ class OffsetManager(commit: Commit = (_,_,_) => Map[TopicPartition, Long]()) {
     commit(offsets, userMerge, rebalanceOffsets)
   }
 
-  private def manageMessage(msg: KafkaMessage): Some[RxMessage] = {
+  private def manageMessage(msg:  MessageAndMetadata[K, V]): Some[Message[K, V]] = {
     currentOffsets += msg.topic -> msg.partition -> msg.offset
     Some(copyMessage(msg, currentOffsets, partialCommit))
   }

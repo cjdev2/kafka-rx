@@ -4,16 +4,15 @@ General Purpose Kafka Client that Just Behaves
 
 #### Features
 
-- thin adapter around kafka's high level producer and consumer api
+- thin, reactive adapter around kafka's high level producer and consumer
 - per message, fine grained commits semantics
-- offset tracking for local rebalancing and replay supression
-- reactive api using rx-scala observables
+- internal offsets management to keep track of consumers
 
-#### Subscribing to a message stream:
+#### Consuming messages:
 
 kafka-rx provides a push alternative to kafka's pull-based iterable stream
 
-To connect to your zookeeper cluster and process kafka streams:
+To connect to your zookeeper cluster and process a stream:
 
 ```scala
 val connector = new RxConnector("zookeeper:2181", "consumer-group")
@@ -25,6 +24,8 @@ connector.getMessageStream("cool-topic-(x|y|z)")
 
 connector.shutdown()
 ```
+
+All of the standard [rx transforms](http://rxmarbles.com/) are available on the resulting stream.
 
 #### Producing messages
 

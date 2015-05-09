@@ -26,16 +26,16 @@ case class Message[K, V](
     }
   }
 
-  def produce[_V](value: _V): ProducerMessage[Null, _V] = {
-    produce[Null, _V](null, value)
+  def produce[v](value: v): ProducedMessage[Null, v, K, V] = {
+    produce[Null, v](null, value)
   }
 
-  def produce[_K, _V](key: _K, value: _V): ProducerMessage[_K, _V] = {
+  def produce[k, v](key: k, value: v): ProducedMessage[k, v, K, V] = {
     produce(key, value, null.asInstanceOf[Int])
   }
 
-  def produce[_K, _V](key: _K, value: _V, partition: Int): ProducerMessage[_K, _V] = {
-    ProducerMessage(key = key, value = value, partition=partition, sourceMessage = Some(this))
+  def produce[k, v](key: k, value: v, partition: Int): ProducedMessage[k, v, K, V] = {
+    new ProducedMessage(key = key, value = value, partition=partition, this)
   }
 
 }

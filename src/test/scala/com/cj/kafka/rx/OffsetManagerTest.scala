@@ -5,6 +5,9 @@ import org.scalatest.{FlatSpec, ShouldMatchers}
 
 class OffsetManagerTest extends FlatSpec with ShouldMatchers {
 
+  type RxMessage = Message[Array[Byte], Array[Byte]]
+  type KafkaMessage = MessageAndMetadata[Array[Byte], Array[Byte]]
+
   "OffsetManager" should "begins with no offsets" in {
     val offsets = new OffsetManager
     offsets.getOffsets should be(Map[Int, Long]())
@@ -12,7 +15,7 @@ class OffsetManagerTest extends FlatSpec with ShouldMatchers {
 
   it should "record offsets for kafka messages" in {
     // given
-    val offsets = new OffsetManager
+    val offsets = new OffsetManager[Array[Byte], Array[Byte]]
     val message = Message(key="test message".getBytes, value="test message".getBytes, topic="test-topic", partition=0, offset=1L)
 
     // when
@@ -25,7 +28,7 @@ class OffsetManagerTest extends FlatSpec with ShouldMatchers {
 
   it should "not record the same message twice" in {
     // given
-    val manager = new OffsetManager
+    val manager = new OffsetManager[Array[Byte], Array[Byte]]
     val message: RxMessage = Message(value="test message".getBytes, topic="test-topic", partition=0, offset=0L)
 
     // when
@@ -39,7 +42,7 @@ class OffsetManagerTest extends FlatSpec with ShouldMatchers {
 
   it should "not update offsets for old messages" in {
     // given
-    val manager = new OffsetManager
+    val manager = new OffsetManager[Array[Byte], Array[Byte]]
     val oldMessage: RxMessage = Message(value="test message".getBytes, topic="test-topic", partition=0, offset=0L)
     val newMessage: RxMessage = Message(value="test message".getBytes, topic="test-topic", partition=0, offset=1L)
 
@@ -55,7 +58,7 @@ class OffsetManagerTest extends FlatSpec with ShouldMatchers {
 
   it should "keep track across multiple partitions" in {
     // given
-    val offsets = new OffsetManager
+    val offsets = new OffsetManager[Array[Byte], Array[Byte]]
     val messageA: RxMessage = Message(value="test message".getBytes, topic="test-topic", partition=0, offset=0L)
     val messageB: RxMessage = Message(value="test message".getBytes, topic="test-topic", partition=1, offset=0L)
 
@@ -69,7 +72,7 @@ class OffsetManagerTest extends FlatSpec with ShouldMatchers {
 
   it should "know which partitions it owns" in {
     // given
-    val offsets = new OffsetManager
+    val offsets = new OffsetManager[Array[Byte], Array[Byte]]
     val messageA: RxMessage = Message(value="test message".getBytes, topic="test-topic", partition=0, offset=0L)
     val messageB: RxMessage = Message(value="test message".getBytes, topic="test-topic", partition=1, offset=0L)
     offsets.check(kafkaRawMessage(messageA))
@@ -84,7 +87,7 @@ class OffsetManagerTest extends FlatSpec with ShouldMatchers {
 
   it should "adjust offsets for committing to zookeeper" in {
     // given an OffsetManager is in a certain state
-    val offsets = new OffsetManager
+    val offsets = new OffsetManager[Array[Byte], Array[Byte]]
     val topic = "test-topic"
     val messageA: RxMessage = Message(value="test message".getBytes, topic=topic, partition=0, offset=5L)
     val messageB: RxMessage = Message(value="test message".getBytes, topic=topic, partition=1, offset=20L)
@@ -124,7 +127,7 @@ class OffsetManagerTest extends FlatSpec with ShouldMatchers {
     }
 
     val message: RxMessage = Message(value="test".getBytes, topic="test-topic", partition=0, offset=0L, partialCommit=failingFn)
-    val manager = new OffsetManager(commit=passingFn)
+    val manager = new OffsetManager[Array[Byte], Array[Byte]](commit=passingFn)
 
     val checkedMessage = manager.check(kafkaRawMessage(message))
     checkedMessage.get.commit() // should not call the failingFn, since the offset manager should have provided the passingFn
