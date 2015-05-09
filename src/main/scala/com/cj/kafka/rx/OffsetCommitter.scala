@@ -3,11 +3,7 @@ package com.cj.kafka.rx
 import com.google.common.base.Charsets
 import org.apache.curator.framework.CuratorFramework
 import org.apache.curator.framework.imps.CuratorFrameworkState
-import org.apache.curator.utils.ZKPaths
-import scala.collection.JavaConversions._
-
 import org.apache.curator.framework.recipes.locks.{InterProcessLock, InterProcessMutex}
-import KafkaHelper._
 
 class OffsetCommitter(group: String, zk: CuratorFramework) {
 
@@ -23,7 +19,7 @@ class OffsetCommitter(group: String, zk: CuratorFramework) {
   def getOffsets(topicPartitions: Iterable[TopicPartition]): OffsetMap = {
      topicPartitions.flatMap { topicPartition =>
        val (topic, partition) = topicPartition
-       val path = KafkaHelper.getPartitionPath(group, topic, partition)
+       val path = getPartitionPath(group, topic, partition)
        Option(zk.checkExists.forPath(path)) match {
          case None => List()
          case Some(filestats) =>
@@ -38,7 +34,7 @@ class OffsetCommitter(group: String, zk: CuratorFramework) {
   def setOffsets(offsets: OffsetMap): OffsetMap = {
     offsets foreach { case (topicPartition, offset) =>
       val (topic,partition) = topicPartition
-      val nodePath = KafkaHelper.getPartitionPath(group, topic, partition)
+      val nodePath = getPartitionPath(group, topic, partition)
       val bytes = offset.toString.getBytes(Charsets.UTF_8)
       Option(zk.checkExists.forPath(nodePath)) match {
         case None =>

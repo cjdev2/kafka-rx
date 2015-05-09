@@ -1,7 +1,5 @@
 package com.cj.kafka.rx
 
-import KafkaHelper._
-
 import org.scalatest.{FlatSpec, ShouldMatchers}
 
 class OffsetManagerTest extends FlatSpec with ShouldMatchers {

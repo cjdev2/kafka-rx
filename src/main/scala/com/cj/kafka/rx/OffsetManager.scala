@@ -1,6 +1,5 @@
 package com.cj.kafka.rx
 
-import KafkaHelper._
 import kafka.message.MessageAndMetadata
 
 class OffsetManager(commit: Commit = (_,_,_) => Map[TopicPartition, Long]()) {
@@ -39,7 +38,7 @@ class OffsetManager(commit: Commit = (_,_,_) => Map[TopicPartition, Long]()) {
 
   private def manageMessage(msg: MessageAndMetadata[Array[Byte], Array[Byte]]): Some[Message[Array[Byte]]] = {
     currentOffsets += msg.topic -> msg.partition -> msg.offset
-    Some(KafkaHelper.copyMessage(msg, currentOffsets, partialCommit))
+    Some(copyMessage(msg, currentOffsets, partialCommit))
   }
 
 }

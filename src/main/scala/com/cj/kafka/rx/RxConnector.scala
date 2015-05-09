@@ -2,15 +2,13 @@ package com.cj.kafka.rx
 
 import kafka.consumer._
 import org.apache.curator.framework.imps.CuratorFrameworkState
-import org.apache.curator.framework.{CuratorFrameworkFactory, CuratorFramework}
+import org.apache.curator.framework.{CuratorFramework, CuratorFrameworkFactory}
 import org.apache.curator.retry.RetryUntilElapsed
 import rx.lang.scala.Observable
 
-import com.cj.kafka.rx.KafkaHelper._
-
 class RxConnector(config: ConsumerConfig) {
 
-  def this(config: SimpleConfig) = this(KafkaHelper.getConsumerConfig(config))
+  def this(config: SimpleConfig) = this(config.getConsumerConfig)
   def this(zookeepers: String, group: String) = this(SimpleConfig(zookeepers, group))
   
   private var kafkaClient: ConsumerConnector = null
@@ -33,7 +31,7 @@ class RxConnector(config: ConsumerConfig) {
   protected[rx] def getObservableStream(stream: KafkaIterable): KafkaObservable = {
     Observable
       .from(stream)
-      .map(KafkaHelper.copyMessage)
+      .map(copyMessage)
   }
 
   protected[rx] def getObservableStream(stream: KafkaIterable, zk: OffsetCommitter): KafkaObservable = {
