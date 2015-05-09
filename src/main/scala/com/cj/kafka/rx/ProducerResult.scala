@@ -2,10 +2,11 @@ package com.cj.kafka.rx
 
 import org.apache.kafka.clients.producer.RecordMetadata
 
-
-case class ProducerResult(topic: String, partition: Int, offset: Long, commit: OffsetMerge => OffsetMap)
-
-
-object ProducerResult {
-    def apply(recordMetadata: RecordMetadata, commitFn: OffsetMerge => OffsetMap) = new ProducerResult(recordMetadata.topic(), recordMetadata.partition(), recordMetadata.offset(), commitFn)
+case class ProducerResult[K, V](recordMetadata: RecordMetadata, message: ProducerMessage[K, V], private val commitFn: OffsetMerge => OffsetMap) {
+    def commit = { commitFn({ (zkOffsets, internalOffsets) =>  internalOffsets }) }
+    def topic: String = recordMetadata.topic()
+    def offset: Long = recordMetadata.offset()
+    def partition: Int = recordMetadata.partition()
+    def key: K = message.key
+    def value: V = message.value
 }

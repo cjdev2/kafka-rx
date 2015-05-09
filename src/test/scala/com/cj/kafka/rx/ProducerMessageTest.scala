@@ -8,7 +8,9 @@ import scala.collection.JavaConversions._
 
 class ProducerMessageTest extends FlatSpec with Matchers with BeforeAndAfter {
 
-    "ProducerMessage" should "should allow items to be save to a kafka stream" in {
+    "ProducerMessage" should "should allow items to be saved to a kafka stream" in {
+
+        val topicName = "topic.name"
 
         val urls = Seq(
             "http://one/include-me",
@@ -19,33 +21,28 @@ class ProducerMessageTest extends FlatSpec with Matchers with BeforeAndAfter {
             "http://three/Include-me"
         )
 
-        val messages = urls.map(s => new Message[Array[Byte]](s.getBytes("UTF-8"), "", 0, 0, Map(), null))
+        val messages = urls.map(s => new Message[Array[Byte]](s.getBytes("UTF-8"), "", 0, 0))
         val stream = Observable.from(messages)
         val producer = new MockProducer()
 
-        val j = stream.transform { m =>
-            new ProducerMessage[Array[Byte], Array[Byte]](key = Some(m.value), value = Some(m.value))
-        } filter { m =>
-            new String(m.value.get).toLowerCase.contains("/include-me")
-        }
+        def pred(s: String) = s.toLowerCase.contains("/include-me")
 
-        j.saveToKafka("topic.name")(producer).last.foreach { result =>
-            result.commit
-        }
+        val metadataStream = stream.filter { m =>
+            pred(new String(m.value, "UTF-8"))
+        }.map { m =>
+            m.produce(m.value, m.value)
+        }.saveToKafka(producer, topicName)
+            .toBlocking
+            .toList
 
         val history = producer.history()
 
-        history.map { producerRecord =>
-            producerRecord.topic()
-        }.toSet shouldBe Set("topic.name")
-
+        history foreach { producerRecord =>
+            producerRecord.topic shouldBe topicName
+        }
 
         history.map { producerRecord =>
             new String(producerRecord.value(), "UTF-8")
-        }.toSet shouldBe Set(
-            "http://one/include-me",
-            "http://two/include-me",
-            "http://three/Include-me"
-        )
+        } shouldBe urls.filter(pred)
     }
 }

@@ -1,20 +1,46 @@
-import com.cj.kafka.rx.{OffsetMap, OffsetMerge, ProducerMessage, RxConnector}
-import org.apache.kafka.clients.producer.{MockProducer, Producer, RecordMetadata}
-import rx.lang.scala.Observable
+import java.util.Properties
+
+import com.cj.kafka.rx._
+import scala.concurrent.duration._
+import org.apache.kafka.clients.producer.{Producer,KafkaProducer}
+import org.apache.kafka.common.serialization.ByteArraySerializer
 
 object TopicTransformProducer extends App {
 
+  type Key = Array[Byte]
+  type Value = Array[Byte]
+  type ByteProducer = Producer[Key, Value]
+  type Result = ProducerResult[Array[Byte], Array[Byte]]
+  
   val conn = new RxConnector("localhost:2181", "consume-and-produce-example")
-  implicit val producer = new MockProducer()
+  val topic = "words"
+  val producer = getProducer
 
-  val messages: Observable[ProducerMessage[Array[Byte], Array[Byte]]] =
-    conn.getMessageStream(".*") transform {
-    message => {
-      ProducerMessage(key = Some(message.value), value = Some(new String(message.value).toUpperCase.getBytes("UTF-8")), commitFn = Some(message.commit _))
+  conn.getMessageStream(topic)
+    .map { message =>
+      val WORD = new String(message.value).toUpperCase.getBytes("UTF-8")
+      message.produce(WORD) 
     }
+    .saveToKafka (producer, topic.toUpperCase)
+    .tumblingBuffer (1.second, 10)
+    .foreach { messages =>
+      if (messages.nonEmpty) {
+        messages.foreach(formatResult)
+        messages.last.commit
+      }
   }
 
-  messages saveToKafka "target.topic" tumbling 150 foreach { messages =>
-      messages.last.foreach { result => result.commit }
+  def formatResult(result: Result) = {
+    val value = new String(result.value, "UTF-8")
+    println(s"Produced: [${result.topic}] - ${result.partition} -> ${result.offset} :: ${value}")
   }
+
+  def getProducer: ByteProducer = {
+    val props = new Properties()
+    props.put("bootstrap.servers", "localhost:9091")
+    props.put("key.serializer", classOf[ByteArraySerializer].getCanonicalName)
+    props.put("value.serializer", classOf[ByteArraySerializer].getCanonicalName)
+    new KafkaProducer(props)
+  }
+
 }

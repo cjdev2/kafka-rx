@@ -1,7 +1,6 @@
 package com.cj.kafka.rx
 
 import kafka.message.MessageAndMetadata
-import org.apache.kafka.clients.producer.ProducerRecord
 
 // alternate version of kafkas MessageAndMetadata class that tracks consumer offsets per message
 case class Message[T](
@@ -14,7 +13,9 @@ case class Message[T](
 
   val topicPartition = topic -> partition
 
-  def commit(fn: OffsetMerge = (_,_) => offsets): OffsetMap = commitWith(offsets, fn)
+  def commit(fn: OffsetMerge = (_,_) => offsets): OffsetMap = {
+    commitWith(offsets, fn)
+  }
 
   override def equals(other: Any) = {
     other match {
@@ -31,4 +32,17 @@ case class Message[T](
     val decoder = new kafka.serializer.DefaultDecoder
     MessageAndMetadata(topic, partition, message, offset, decoder, decoder)
   }
+
+  def produce[V](value: V): ProducerMessage[Array[Byte], V] = {
+    produce[Array[Byte], V](null.asInstanceOf[Array[Byte]], value)
+  }
+
+  def produce[K, V](key: K, value: V): ProducerMessage[K, V] = {
+    produce(key, value, null.asInstanceOf[Int])
+  }
+
+  def produce[K, V](key: K, value: V, partition: Int): ProducerMessage[K, V] = {
+    ProducerMessage(key = key, value = value, partition=partition, commitFn = Option(commit))
+  }
+
 }
