@@ -2,45 +2,50 @@ import java.util.Properties
 
 import com.cj.kafka.rx._
 import scala.concurrent.duration._
+import org.apache.kafka.common.serialization.StringSerializer
 import org.apache.kafka.clients.producer.{Producer,KafkaProducer}
-import org.apache.kafka.common.serialization.ByteArraySerializer
 
 object TopicTransformProducer extends App {
 
-  type Key = Array[Byte]
-  type Value = Array[Byte]
-  type ByteProducer = Producer[Key, Value]
-  type Result = ProducerResult[Array[Byte], Array[Byte]]
+  type Key = String
+  type Value = String
+  type StringProducer = Producer[Key, Value]
   
-  val conn = new RxConnector("localhost:2181", "consume-and-produce-example")
+  val conn = new RxConnector("localhost:2181", "words-to-WORDS")
   val topic = "words"
-  val producer = getProducer
 
-  conn.getMessageStream(topic)
+  getStringStream(conn, topic)
     .map { message =>
-      val WORD = new String(message.value).toUpperCase.getBytes("UTF-8")
-      message.produce(WORD) 
+      message.produce(
+        key = message.value.toUpperCase,
+        value = message.value.toUpperCase
+      )
     }
-    .saveToKafka (producer, topic.toUpperCase)
-    .tumblingBuffer (1.second, 10)
+    .saveToKafka(getProducer, topic.toUpperCase)
+    .tumblingBuffer(1.second, 10)
     .foreach { messages =>
       if (messages.nonEmpty) {
-        messages.foreach(formatResult)
-        messages.last.commit
+        messages.foreach(formatMessage)
+        messages.last.commit()
       }
   }
 
-  def formatResult(result: Result) = {
-    val value = new String(result.value, "UTF-8")
-    println(s"Produced: [${result.topic}] - ${result.partition} -> ${result.offset} :: ${value}")
+  def formatMessage(result: Message[Key, Value]) = {
+    println(s"Produced: [${result.topic}] - ${result.partition} -> ${result.offset} :: ${result.value}")
   }
 
-  def getProducer: ByteProducer = {
+  def getProducer: StringProducer = {
     val props = new Properties()
     props.put("bootstrap.servers", "localhost:9091")
-    props.put("key.serializer", classOf[ByteArraySerializer].getCanonicalName)
-    props.put("value.serializer", classOf[ByteArraySerializer].getCanonicalName)
+    props.put("key.serializer", classOf[StringSerializer].getCanonicalName)
+    props.put("value.serializer", classOf[StringSerializer].getCanonicalName)
     new KafkaProducer(props)
+  }
+
+  def getStringStream(conn: RxConnector, topic: String) = {
+    conn.getMessageStream(topic).map { message =>
+      message.copy(value = new String(message.value, "UTF-8"))
+    }
   }
 
 }

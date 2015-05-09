@@ -56,7 +56,7 @@ class RxConnectorIntegrationTest extends FlatSpec with ShouldMatchers with Befor
       client.start()
       val zk: OffsetCommitter = new OffsetCommitter("test", client)
       val fakeMessages = getFakeKafkaMessages(10)
-      val stream: Observable[Message[Long]] = conn.getObservableStream(fakeMessages, zk) map { message =>
+      val stream = conn.getObservableStream(fakeMessages, zk) map { message =>
         message.copy(value = message.offset)
       }
       val messages = stream.toBlocking.toList

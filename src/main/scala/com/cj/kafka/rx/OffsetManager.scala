@@ -8,7 +8,7 @@ class OffsetManager(commit: Commit = (_,_,_) => Map[TopicPartition, Long]()) {
   private var currentOffsets = Map[TopicPartition, Long]()
   def getOffsets: OffsetMap = currentOffsets
 
-  def check(message: MessageAndMetadata[Array[Byte], Array[Byte]]): Option[Message[Array[Byte]]] = {
+  def check(message: KafkaMessage): Option[RxMessage] = {
     // updates internal offset state & determines whether the message is stale due to replay
     currentOffsets.get(message.topic -> message.partition) match {
       case None => manageMessage(message)
@@ -36,7 +36,7 @@ class OffsetManager(commit: Commit = (_,_,_) => Map[TopicPartition, Long]()) {
     commit(offsets, userMerge, rebalanceOffsets)
   }
 
-  private def manageMessage(msg: MessageAndMetadata[Array[Byte], Array[Byte]]): Some[Message[Array[Byte]]] = {
+  private def manageMessage(msg: KafkaMessage): Some[RxMessage] = {
     currentOffsets += msg.topic -> msg.partition -> msg.offset
     Some(copyMessage(msg, currentOffsets, partialCommit))
   }

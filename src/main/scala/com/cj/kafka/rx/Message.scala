@@ -1,25 +1,24 @@
 package com.cj.kafka.rx
 
-import kafka.message.MessageAndMetadata
-
-// alternate version of kafkas MessageAndMetadata class that tracks consumer offsets per message
-case class Message[T](
-  value: T,
+case class Message[K, V](
+  key: K = null,
+  value: V,
   topic: String,
   partition: Int,
   offset: Long,
-  offsets: OffsetMap = Map[TopicPartition, Long](),
-  commitWith: PartialCommit = { case (x, fn) => fn(x,x); x } ) {
+  offsets: OffsetMap = defaultOffsets,
+  private[rx] val partialCommit: PartialCommit = defaultPartialCommit ) {
 
   val topicPartition = topic -> partition
 
   def commit(fn: OffsetMerge = (_,_) => offsets): OffsetMap = {
-    commitWith(offsets, fn)
+    partialCommit(offsets, fn)
   }
 
   override def equals(other: Any) = {
     other match {
-      case message: Message[T] =>
+      case message: Message[K, V] =>
+        message.key == key &&
         message.topic == topic &&
         message.partition == partition &&
         message.offset == offset
@@ -27,22 +26,16 @@ case class Message[T](
     }
   }
 
-  def kafkaMessage: MessageAndMetadata[Array[Byte], Array[Byte]] = {
-    val message = new kafka.message.Message(value.asInstanceOf[Array[Byte]])
-    val decoder = new kafka.serializer.DefaultDecoder
-    MessageAndMetadata(topic, partition, message, offset, decoder, decoder)
+  def produce[_V](value: _V): ProducerMessage[Null, _V] = {
+    produce[Null, _V](null, value)
   }
 
-  def produce[V](value: V): ProducerMessage[Array[Byte], V] = {
-    produce[Array[Byte], V](null.asInstanceOf[Array[Byte]], value)
-  }
-
-  def produce[K, V](key: K, value: V): ProducerMessage[K, V] = {
+  def produce[_K, _V](key: _K, value: _V): ProducerMessage[_K, _V] = {
     produce(key, value, null.asInstanceOf[Int])
   }
 
-  def produce[K, V](key: K, value: V, partition: Int): ProducerMessage[K, V] = {
-    ProducerMessage(key = key, value = value, partition=partition, commitFn = Option(commit))
+  def produce[_K, _V](key: _K, value: _V, partition: Int): ProducerMessage[_K, _V] = {
+    ProducerMessage(key = key, value = value, partition=partition, sourceMessage = Some(this))
   }
 
 }

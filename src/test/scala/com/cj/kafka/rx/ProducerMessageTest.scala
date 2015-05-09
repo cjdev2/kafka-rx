@@ -21,7 +21,7 @@ class ProducerMessageTest extends FlatSpec with Matchers with BeforeAndAfter {
             "http://three/Include-me"
         )
 
-        val messages = urls.map(s => new Message[Array[Byte]](s.getBytes("UTF-8"), "", 0, 0))
+        val messages = urls.map(s => new Message(key = s.getBytes("UTF-8"), value = s.getBytes("UTF-8"), "", 0, 0))
         val stream = Observable.from(messages)
         val producer = new MockProducer()
 
