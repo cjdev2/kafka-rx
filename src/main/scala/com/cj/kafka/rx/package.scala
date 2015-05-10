@@ -1,13 +1,12 @@
 package com.cj.kafka
 
-import org.apache.kafka.clients.producer.{RecordMetadata, ProducerRecord}
 
 package object rx {
 
   import _root_.rx.lang.scala.Observable
   import kafka.message.MessageAndMetadata
   import org.apache.curator.utils.ZKPaths
-  import org.apache.kafka.clients.producer.Producer
+  import org.apache.kafka.clients.producer.{Producer, ProducerRecord}
 
   type TopicPartition = (String, Int)
   type OffsetMap = Map[TopicPartition, Long]
@@ -46,6 +45,44 @@ package object rx {
     )
   }
 
+  implicit class MessageProducerObservable[K, V](stream: Observable[Message[K, V]]) {
+    def saveToKafka(producer: Producer[K, V], topic: String): Observable[Message[K, V]] = {
+      stream.map { message =>
+        message.produce[K, V](key = message.key, value = message.value, partition = message.partition)
+      }.saveToKafka(producer, topic)
+    }
+  }
+
+  implicit class ProducerMessageObservable[K, V](stream: Observable[ProducerMessage[K, V]]) {
+    def saveToKafka(producer: Producer[K, V], topic: String): Observable[Message[K, V]] = {
+      stream.map { message =>
+        val record = message.toProducerRecord(topic)
+        val metadata = producer.send(record).get()
+        Message[K, V](
+          key = record.key(),
+          value = record.value(),
+          partition = record.partition(),
+          topic = record.topic(),
+          offset = metadata.offset()
+        )
+      }
+    }
+  }
+
+  implicit class ProducerRecordObservable[K, V, k, v](stream: Observable[ProducerRecord[K, V]]) {
+    def saveToKafka(producer: Producer[K, V]): Observable[Message[K, V]] = {
+      stream.map { record: ProducerRecord[K, V] =>
+        val metadata = producer.send(record).get()
+        Message[K, V](
+          key = record.key(),
+          value = record.value(),
+          partition = record.partition(),
+          topic = record.topic(),
+          offset = metadata.offset()
+        )
+      }
+    }
+  }
 
   implicit class ProducedMessageObservable[K, V, k, v](stream: Observable[ProducedMessage[K, V, k, v]]) {
     def saveToKafka(producer: Producer[K, V], topic: String): Observable[Message[K, V]] = {
@@ -64,14 +101,5 @@ package object rx {
       }
     }
   }
-
-  implicit class MessageProducerObservable[K, V](stream: Observable[Message[K, V]]) {
-    def saveToKafka(producer: Producer[K, V], topic: String): Observable[Message[K, V]] = {
-      stream.map { message =>
-        message.produce[K, V](key = message.key, value = message.value, partition = message.partition)
-      }.saveToKafka(producer, topic)
-    }
-  }
-
 
 }

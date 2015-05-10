@@ -11,7 +11,7 @@ case class Message[K, V](
 
   val topicPartition = topic -> partition
 
-  def commit(fn: OffsetMerge = (_,_) => offsets): OffsetMap = {
+  def commit(fn: OffsetMerge = (zkOffsets,proposedOffsets) => offsets): OffsetMap = {
     partialCommit(offsets, fn)
   }
 
