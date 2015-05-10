@@ -59,11 +59,11 @@ package object rx {
         val record = message.toProducerRecord(topic)
         val metadata = producer.send(record).get()
         Message[K, V](
-          key = record.key(),
-          value = record.value(),
-          partition = record.partition(),
-          topic = record.topic(),
-          offset = metadata.offset()
+          key = record.key,
+          value = record.value,
+          partition = metadata.partition,
+          topic = metadata.topic,
+          offset = metadata.offset
         )
       }
     }
@@ -74,11 +74,11 @@ package object rx {
       stream.map { record: ProducerRecord[K, V] =>
         val metadata = producer.send(record).get()
         Message[K, V](
-          key = record.key(),
-          value = record.value(),
-          partition = record.partition(),
-          topic = record.topic(),
-          offset = metadata.offset()
+          key = record.key,
+          value = record.value,
+          partition = metadata.partition,
+          topic = metadata.topic,
+          offset = metadata.offset
         )
       }
     }
@@ -90,11 +90,11 @@ package object rx {
         val record = message.toProducerRecord(topic)
         val metadata = producer.send(record).get()
         Message[K, V](
-          key = record.key(),
-          value = record.value(),
-          partition = record.partition(),
-          topic = record.topic(),
-          offset = metadata.offset(),
+          key = record.key,
+          value = record.value,
+          partition = metadata.partition,
+          topic = metadata.topic,
+          offset = metadata.offset,
           offsets = message.sourceMessage.offsets,
           partialCommit = message.sourceMessage.partialCommit
         )
