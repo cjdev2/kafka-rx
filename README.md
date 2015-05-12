@@ -43,7 +43,7 @@ tweetStream.map(parse)
   }
 ```
 
-Check out the [words-to-WORDS](examples/TopicTransformProducer.scala) producer for a full working example.
+Check out the [words-to-WORDS](examples/TopicTransformProducer.scala) producer or the [twitter-streaming](examples/twitter-streaming) demo for a full working example.
 
 #### Reliable Message Processing
 

@@ -76,6 +76,12 @@
                         <javacArg>-target</javacArg>
                         <javacArg>${java.version}</javacArg>
                     </javacArgs>
+                    <launchers>
+                        <launcher>
+                            <id>main</id>
+                            <mainClass>TwitterStream</mainClass>
+                        </launcher>
+                    </launchers>
                 </configuration>
             </plugin>
 
