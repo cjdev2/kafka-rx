@@ -7,12 +7,12 @@ case class Message[K, V](
   partition: Int,
   offset: Long,
   offsets: OffsetMap = defaultOffsets,
-  private[rx] val partialCommit: PartialCommit = defaultPartialCommit ) {
+  private[rx] val mergeWith: MergeWith = defaultMergeWith ) {
 
   val topicPartition = topic -> partition
 
-  def commit(fn: OffsetMerge = (zkOffsets,proposedOffsets) => offsets): OffsetMap = {
-    partialCommit(offsets, fn)
+  def commit(merge: OffsetMerge = (zkOffsets, proposedOffsets) => proposedOffsets): OffsetMap = {
+    mergeWith(offsets, merge)
   }
 
   override def equals(other: Any) = {
@@ -26,12 +26,16 @@ case class Message[K, V](
     }
   }
 
+  def produce: ProducedMessage[K, V, K, V] = {
+    produce[K, V](key, value, partition)
+  }
+
   def produce[v](value: v): ProducedMessage[Null, v, K, V] = {
     produce[Null, v](null, value)
   }
 
   def produce[k, v](key: k, value: v): ProducedMessage[k, v, K, V] = {
-    produce(key, value, null.asInstanceOf[Int])
+    new ProducedMessage(key, value, sourceMessage = this)
   }
 
   def produce[k, v](key: k, value: v, partition: Int): ProducedMessage[k, v, K, V] = {

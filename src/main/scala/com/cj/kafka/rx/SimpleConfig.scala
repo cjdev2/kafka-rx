@@ -8,6 +8,7 @@ case class SimpleConfig(zookeepers: String, group: String, autocommit: Boolean =
   def getConsumerConfig = {
     val props = new Properties()
     props.put("group.id", group)
+    props.put("producer.type", "async")
     props.put("zookeeper.connect", zookeepers)
     props.put("auto.offset.reset", if (startFromLatest) "largest" else "smallest")
     props.put("auto.commit.enable", if (autocommit) "true" else "false")

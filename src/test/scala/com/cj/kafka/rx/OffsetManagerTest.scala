@@ -126,7 +126,7 @@ class OffsetManagerTest extends FlatSpec with ShouldMatchers {
       Map[TopicPartition, Long]()
     }
 
-    val message: RxMessage = Message(value="test".getBytes, topic="test-topic", partition=0, offset=0L, partialCommit=failingFn)
+    val message: RxMessage = Message(value="test".getBytes, topic="test-topic", partition=0, offset=0L, mergeWith=failingFn)
     val manager = new OffsetManager[Array[Byte], Array[Byte]](commit=passingFn)
 
     val checkedMessage = manager.check(kafkaRawMessage(message))

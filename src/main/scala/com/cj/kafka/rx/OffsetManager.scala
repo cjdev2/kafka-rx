@@ -32,13 +32,13 @@ class OffsetManager[K, V](commit: Commit = (_,_,_) => Map[TopicPartition, Long](
     }
   }
 
-  def partialCommit(offsets: OffsetMap, userMerge: OffsetMerge): OffsetMap = {
+  def mergeWith(offsets: OffsetMap, userMerge: OffsetMerge): OffsetMap = {
     commit(offsets, userMerge, rebalanceOffsets)
   }
 
   private def manageMessage(msg:  MessageAndMetadata[K, V]): Some[Message[K, V]] = {
     currentOffsets += msg.topic -> msg.partition -> msg.offset
-    Some(copyMessage(msg, currentOffsets, partialCommit))
+    Some(copyMessage(msg, currentOffsets, mergeWith))
   }
 
 }
