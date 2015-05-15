@@ -23,7 +23,7 @@ class OffsetManagerTest extends FlatSpec with ShouldMatchers {
 
     // then
     offsets.getOffsets should be(Map(message.topicPartition -> message.offset))
-    checkedMessage.get.offsets should be(offsets.getOffsets)
+    checkedMessage.get.consumerOffsets should be(offsets.getOffsets)
   }
 
   it should "not record the same message twice" in {
@@ -36,7 +36,7 @@ class OffsetManagerTest extends FlatSpec with ShouldMatchers {
     val secondAttempt = manager.check(kafkaRawMessage(message))
 
     // then
-    firstAttempt should be(Some(message.copy(offsets = manager.getOffsets)))
+    firstAttempt should be(Some(message.copy(consumerOffsets = manager.getOffsets)))
     secondAttempt should be(None)
   }
 
@@ -52,7 +52,7 @@ class OffsetManagerTest extends FlatSpec with ShouldMatchers {
 
     // then
     manager.getOffsets should be(Map(newMessage.topicPartition -> newMessage.offset))
-    newAttempt should be(Some(newMessage.copy(offsets = manager.getOffsets)))
+    newAttempt should be(Some(newMessage.copy(consumerOffsets = manager.getOffsets)))
     oldAttempt should be(None)
   }
 

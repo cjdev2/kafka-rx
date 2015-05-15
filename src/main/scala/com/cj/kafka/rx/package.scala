@@ -23,25 +23,18 @@ package object rx {
   def getPartitionPath(group: String, topic: String, part: Int) =
     ZKPaths.makePath(s"/consumers/$group/offsets/$topic", part.toString)
 
-  private[rx] def copyMessage[K, V](message: MessageAndMetadata[K, V]): Message[K, V] = {
-    Message[K, V](
-      key = message.key(),
-      value = message.message(),
-      topic = message.topic,
-      partition = message.partition,
-      offset = message.offset
-    )
-  }
-
-  private[rx] def copyMessage[K, V](message: MessageAndMetadata[K, V], offsets: OffsetMap, checkpoint: MergeWith): Message[K, V] = {
+  private[rx] def copyMessage[K, V](
+      message: MessageAndMetadata[K, V],
+      offsets: OffsetMap = defaultOffsets,
+      mergeWith: MergeWith = defaultMergeWith): Message[K, V] = {
     Message[K, V](
       key = message.key(),
       value = message.message(),
       topic = message.topic,
       partition = message.partition,
       offset = message.offset,
-      offsets = offsets,
-      mergeWith = checkpoint
+      consumerOffsets = offsets,
+      mergeWith = mergeWith
     )
   }
 
@@ -59,27 +52,31 @@ package object rx {
 
   implicit class ProducerRecordObservable[K, V, k, v](stream: Observable[ProducerRecord[K, V]]) {
     def saveToKafka(producer: Producer[K, V]): Observable[Message[K, V]] = {
-      stream.flatMap(getMetadata(producer, _))
+      stream.flatMap(getResponseStream(producer, _))
     }
   }
 
   implicit class ProducedMessageObservable[K, V, k, v](stream: Observable[ProducedMessage[K, V, k, v]]) {
     def saveToKafka(producer: Producer[K, V], topic: String): Observable[Message[K, V]] = {
       stream.flatMap { message =>
-        getMetadata(producer, message.toProducerRecord(topic)) map { msg =>
-          msg.copy(
-            offsets = message.sourceMessage.offsets,
-            mergeWith = message.sourceMessage.mergeWith
-          )
-        }
+        getResponseStream(
+          producer,
+          message.toProducerRecord(topic),
+          message.sourceMessage.consumerOffsets,
+          message.sourceMessage.mergeWith
+        )
       }
     }
   }
 
-  def getMetadata[K, V](producer: Producer[K, V], record: ProducerRecord[K, V]): Observable[Message[K, V]] = {
+  def getResponseStream[K, V](
+      producer: Producer[K, V],
+      record: ProducerRecord[K, V],
+      offsets: OffsetMap = defaultOffsets,
+      mergeWith: MergeWith = defaultMergeWith): Observable[Message[K, V]] = {
     val subject = PublishSubject[Message[K, V]]()
     producer.send(record, new Callback {
-      override def onCompletion(metadata: RecordMetadata, exception: Exception): Unit = {
+      def onCompletion(metadata: RecordMetadata, exception: Exception): Unit = {
         if (exception != null) {
           subject.onError(exception)
         } else {

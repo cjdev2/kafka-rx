@@ -6,13 +6,13 @@ case class Message[K, V](
   topic: String,
   partition: Int,
   offset: Long,
-  offsets: OffsetMap = defaultOffsets,
+  private[rx] val consumerOffsets: OffsetMap = defaultOffsets,
   private[rx] val mergeWith: MergeWith = defaultMergeWith ) {
 
   val topicPartition = topic -> partition
 
   def commit(merge: OffsetMerge = (zkOffsets, proposedOffsets) => proposedOffsets): OffsetMap = {
-    mergeWith(offsets, merge)
+    mergeWith(consumerOffsets, merge)
   }
 
   override def equals(other: Any) = {

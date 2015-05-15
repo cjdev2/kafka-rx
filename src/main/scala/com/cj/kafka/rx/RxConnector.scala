@@ -41,7 +41,7 @@ class RxConnector(config: ConsumerConfig) {
   protected[rx] def getObservableStream[K, V](stream: Iterable[MessageAndMetadata[K, V]]): Observable[Message[K, V]] = {
     Observable
       .from(stream)
-      .map(copyMessage[K, V])
+      .map(copyMessage[K, V](_))
   }
 
   protected[rx] def getObservableStream[K, V](stream: Iterable[MessageAndMetadata[K, V]], zk: OffsetCommitter): Observable[Message[K, V]] = {

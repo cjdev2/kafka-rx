@@ -61,10 +61,10 @@ class RxConnectorIntegrationTest extends FlatSpec with ShouldMatchers with Befor
       }
       val messages = stream.toBlocking.toList
       messages.last.commit()
-      val adjustedOffsets = messages.last.offsets map { case (topicPartition, offset) =>
+      val adjustedOffsets = messages.last.consumerOffsets map { case (topicPartition, offset) =>
         topicPartition -> (offset + 1)
       }
-      zk.getOffsets(messages.last.offsets.keys) should be(adjustedOffsets)
+      zk.getOffsets(messages.last.consumerOffsets.keys) should be(adjustedOffsets)
     } finally {
       server.close()
       client.close()
