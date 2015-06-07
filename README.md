@@ -1,16 +1,16 @@
 # kafka-rx [![Build Status](https://travis-ci.org/cjdev/kafka-rx.svg)](https://travis-ci.org/cjdev/kafka-rx) [![Maven Central](https://img.shields.io/maven-central/v/com.cj/kafka-rx_2.10.svg)](http://search.maven.org/#search%7Cgav%7C1%7Cg%3A%22com.cj%22%20AND%20a%3A%22kafka-rx_2.10%22)
 
-General Purpose Kafka Client that Just Behaves
+General Purpose [Kafka](https://kafka.apache.org) Client that Just Behaves
 
 #### Features
 
 - thin, reactive adapter around kafka's high level producer and consumer
 - per message, fine grained commits semantics
-- internal offsets management to keep track of consumers
+- offset management to keep track of consumer positions
 
 #### Consuming messages:
 
-kafka-rx provides a push alternative to kafka's pull-based iterable stream
+kafka-rx provides a push alternative to kafka's pull-based stream
 
 To connect to your zookeeper cluster and process a stream:
 
@@ -49,7 +49,7 @@ Check out the [words-to-WORDS](examples/TopicTransformProducer.scala) producer o
 
 kafka-rx was built with reliable message processing in mind
 
-To support this, every kafka-rx message has a `.commit()` method which optionally takes a user provided merge function, giving the program an opportunity to reconcile with zookeeper and manage delivery guarantees.
+To support this, every kafka-rx message has a `.commit()` method which optionally takes a user provided merge function, giving the program an opportunity to reconcile offsets with zookeeper and manage delivery guarantees.
 
 ```scala
 stream.buffer(23).foreach { bucket =>

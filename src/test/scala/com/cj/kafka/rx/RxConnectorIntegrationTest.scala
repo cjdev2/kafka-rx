@@ -50,7 +50,7 @@ class RxConnectorIntegrationTest extends FlatSpec with ShouldMatchers with Befor
   it should "commit offsets to zookeeper through message checkpoints" in {
     val server = new TestingServer()
     val client = CuratorFrameworkFactory.newClient(server.getConnectString, new RetryUntilElapsed(500,50))
-    val conn = new RxConnector("test", "test")
+    val conn = new RxConnector("test", "test", curator = client)
     try {
       server.start()
       client.start()

@@ -12,8 +12,7 @@ object TopicTransformProducer extends App {
   type Value = String
   type StringProducer = Producer[Key, Value]
 
-  val config = SimpleConfig("localhost:2181", "words-to-WORDS")
-  val conn = new RxConnector(config.getConsumerConfig)
+  val conn = new RxConnector("localhost:2181", "words-to-WORDS")
   val topic = "words"
 
   getStringStream(conn, topic)

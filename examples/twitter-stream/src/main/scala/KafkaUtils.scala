@@ -1,6 +1,6 @@
 import java.util.Properties
 
-import com.cj.kafka.rx.{RxConnector, SimpleConfig, Message}
+import com.cj.kafka.rx.{RxConnector, Message}
 import kafka.serializer.StringDecoder
 import org.apache.kafka.clients.producer.{Producer, KafkaProducer}
 import org.apache.kafka.common.serialization.StringSerializer
@@ -17,13 +17,12 @@ object KafkaUtils {
   type Value = String
 
   def getStringStream(zookeepers: String, group: String, kafkaTopic: String): Observable[Message[Key, Value]] = {
-    val config = new SimpleConfig(
+    new RxConnector(
       zookeepers = zookeepers,
       group = group,
       autocommit = true,
       startFromLatest = true
-    )
-    new RxConnector(config).getMessageStream(
+    ).getMessageStream(
       topic = kafkaTopic,
       keyDecoder = new StringDecoder,
       valueDecoder = new StringDecoder

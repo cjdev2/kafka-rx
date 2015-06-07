@@ -1,20 +1,26 @@
 package com.cj.kafka.rx
 
+import java.util.Properties
+
 import kafka.consumer._
 import kafka.message.MessageAndMetadata
 import kafka.serializer.{DefaultDecoder, Decoder}
 import org.apache.curator.framework.imps.CuratorFrameworkState
 import org.apache.curator.framework.{CuratorFramework, CuratorFrameworkFactory}
-import org.apache.curator.retry.RetryUntilElapsed
+import org.apache.curator.retry.ExponentialBackoffRetry
 import rx.lang.scala.Observable
 
-class RxConnector(config: ConsumerConfig) {
+class RxConnector(config: ConsumerConfig, curator: CuratorFramework) {
 
-  def this(config: SimpleConfig) = this(config.getConsumerConfig)
-  def this(zookeepers: String, group: String) = this(SimpleConfig(zookeepers, group))
-  
+  def this(zookeepers: String, group: String, autocommit: Boolean = false, startFromLatest: Boolean = false, curator: CuratorFramework = null) =
+    this(RxConnector.getConsumerConfig(zookeepers, group, autocommit, startFromLatest), curator)
+
   private var kafkaClient: ConsumerConnector = null
-  private var zkClient: CuratorFramework = null
+  private var zkClient: CuratorFramework = curator
+
+  def setCuratorFramework(curator: CuratorFramework) {
+    zkClient = curator
+  }
 
   def getMessageStream[K, V](topic: String, keyDecoder: Decoder[K] = new DefaultDecoder, valueDecoder: Decoder[V] = new DefaultDecoder) = {
     getMessageStreams(topic, 1, keyDecoder, valueDecoder)(0)
@@ -68,7 +74,7 @@ class RxConnector(config: ConsumerConfig) {
 
   private def ensureZookeeperConnection() = {
     if (zkClient == null) {
-      zkClient = CuratorFrameworkFactory.newClient(config.zkConnect, new RetryUntilElapsed(10000, 250))
+      zkClient = CuratorFrameworkFactory.newClient(config.zkConnect, RxConnector.RETRY_POLICY)
     }
     if (zkClient.getState != CuratorFrameworkState.STARTED) {
       zkClient.start()
@@ -89,4 +95,17 @@ class RxConnector(config: ConsumerConfig) {
     }
   }
 
+}
+
+object RxConnector {
+  val RETRY_POLICY = new ExponentialBackoffRetry(256, 1024)
+
+  private[rx] def getConsumerConfig(zookeepers: String, group: String, autocommit: Boolean = false, startFromLatest: Boolean = false) = {
+    val props = new Properties()
+    props.put("group.id", group)
+    props.put("zookeeper.connect", zookeepers)
+    props.put("auto.offset.reset", if (startFromLatest) "largest" else "smallest")
+    props.put("auto.commit.enable", if (autocommit) "true" else "false")
+    new ConsumerConfig(props)
+  }
 }
