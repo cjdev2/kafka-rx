@@ -83,14 +83,14 @@ From maven:
 <dependency>
   <groupId>com.cj</groupId>
   <artifactId>kafka-rx_2.11</artifactId>
-  <version>0.2.0-SNAPSHOT</version>
+  <version>0.2.0</version>
 </dependency>
 ```
 
 From sbt:
 
 ```scala
-libraryDependencies += "com.cj" % "kafka-rx" % "0.2.0-SNAPSHOT"
+libraryDependencies += "com.cj" % "kafka-rx" % "0.2.0"
 ```
 
 #### Videos & Examples
