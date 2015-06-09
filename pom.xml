@@ -15,7 +15,8 @@
 
     <properties>
         <kafka.version>0.8.2.1</kafka.version>
-        <curator.version>2.7.1</curator.version>
+        <curator.version>2.8.0</curator.version>
+        <rx.scala.version>0.25.0</rx.scala.version>
         <scala.compat.version>2.11</scala.compat.version>
         <scala.compiler.version>2.11.6</scala.compiler.version>
     </properties>
@@ -31,7 +32,7 @@
         <dependency>
             <groupId>io.reactivex</groupId>
             <artifactId>rxscala_${scala.compat.version}</artifactId>
-            <version>0.24.1</version>
+            <version>${rx.scala.version}</version>
         </dependency>
 
         <dependency>
