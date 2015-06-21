@@ -5,30 +5,25 @@ import java.util.Properties
 import kafka.consumer._
 import kafka.message.MessageAndMetadata
 import kafka.serializer.{DefaultDecoder, Decoder}
-import org.apache.curator.framework.imps.CuratorFrameworkState
-import org.apache.curator.framework.{CuratorFramework, CuratorFrameworkFactory}
+import org.apache.curator.framework.CuratorFrameworkFactory
 import org.apache.curator.retry.ExponentialBackoffRetry
 import rx.lang.scala.Observable
 
-class RxConnector(config: ConsumerConfig, curator: CuratorFramework) {
+class RxConnector(config: ConsumerConfig, committer: OffsetCommitter) {
 
-  def this(zookeepers: String, group: String, autocommit: Boolean = false, startFromLatest: Boolean = false, curator: CuratorFramework = null) =
-    this(RxConnector.getConsumerConfig(zookeepers, group, autocommit, startFromLatest), curator)
+  def this(zookeepers: String, group: String, autocommit: Boolean = false, startFromLatest: Boolean = false, committer: OffsetCommitter = null) =
+    this(RxConnector.getConsumerConfig(zookeepers, group, autocommit, startFromLatest), committer)
 
-  private var kafkaClient: ConsumerConnector = null
-  private var zkClient: CuratorFramework = curator
-
-  def setCuratorFramework(curator: CuratorFramework) {
-    zkClient = curator
-  }
+  private var kafkaConsumer: ConsumerConnector = null
+  private var offsetCommitter: OffsetCommitter = committer
 
   def getMessageStream[K, V](topic: String, keyDecoder: Decoder[K] = new DefaultDecoder, valueDecoder: Decoder[V] = new DefaultDecoder) = {
     getMessageStreams(topic, 1, keyDecoder, valueDecoder)(0)
   }
 
   def getMessageStreams[K, V](topic: String, numStreams: Int = 1, keyDecoder: Decoder[K] = new DefaultDecoder, valueDecoder: Decoder[V] = new DefaultDecoder) = {
-    connect()
-    val kafkaStreams: Seq[KafkaStream[K, V]] = kafkaClient.createMessageStreamsByFilter[K, V](
+    ensureKafkaConsumer()
+    val kafkaStreams: Seq[KafkaStream[K, V]] = kafkaConsumer.createMessageStreamsByFilter[K, V](
       new Whitelist(topic),
       numStreams = numStreams,
       keyDecoder = keyDecoder,
@@ -37,9 +32,8 @@ class RxConnector(config: ConsumerConfig, curator: CuratorFramework) {
     if (config.autoCommitEnable) {
       kafkaStreams.map(getObservableStream[K, V])
     } else {
-      val zkCommitter = new OffsetCommitter(config.groupId, zkClient)
       kafkaStreams.map({ case stream =>
-        getObservableStream[K, V](stream, zkCommitter)
+        getObservableStream[K, V](stream, offsetCommitter)
       })
     }
   }
@@ -47,11 +41,12 @@ class RxConnector(config: ConsumerConfig, curator: CuratorFramework) {
   protected[rx] def getObservableStream[K, V](stream: Iterable[MessageAndMetadata[K, V]]): Observable[Message[K, V]] = {
     Observable
       .from(stream)
-      .map(copyMessage[K, V](_))
+      .map(getMessage[K, V](_))
   }
 
   protected[rx] def getObservableStream[K, V](stream: Iterable[MessageAndMetadata[K, V]], zk: OffsetCommitter): Observable[Message[K, V]] = {
-    val manager = new OffsetManager[K, V](commit = zk.commit)
+    if (!config.autoCommitEnable) ensureCommitConnection()
+    val manager = new OffsetManager[K, V](zk)
     Observable
       .from(stream)
       .map(manager.check)
@@ -59,47 +54,40 @@ class RxConnector(config: ConsumerConfig, curator: CuratorFramework) {
       .map(_.get)
   }
 
-  def connect() = {
-    this.synchronized {
-      ensureKafkaConnection()
-      if (!config.autoCommitEnable) ensureZookeeperConnection()
+  private def ensureKafkaConsumer(): Unit = {
+    if (kafkaConsumer == null) {
+      kafkaConsumer = Consumer.create(config)
     }
   }
 
-  private def ensureKafkaConnection(): Unit = {
-    if (kafkaClient == null) {
-      kafkaClient = Consumer.create(config)
+  private def ensureCommitConnection() = {
+    if (offsetCommitter == null) {
+      offsetCommitter = RxConnector.getZKCommitter(config)
     }
-  }
-
-  private def ensureZookeeperConnection() = {
-    if (zkClient == null) {
-      zkClient = CuratorFrameworkFactory.newClient(config.zkConnect, RxConnector.RETRY_POLICY)
-    }
-    if (zkClient.getState != CuratorFrameworkState.STARTED) {
-      zkClient.start()
-      zkClient.blockUntilConnected()
-    }
+    offsetCommitter.start()
   }
 
   def shutdown() = {
     this.synchronized {
-      if (kafkaClient != null) {
-        kafkaClient.shutdown()
-        kafkaClient = null
+      if (kafkaConsumer != null) {
+        kafkaConsumer.shutdown()
+        kafkaConsumer = null
       }
-      if (zkClient != null) {
-        zkClient.close()
-        zkClient = null
+      if (offsetCommitter != null) {
+        offsetCommitter.stop()
+        offsetCommitter = null
       }
     }
   }
-
 }
 
 object RxConnector {
-  val RETRY_POLICY = new ExponentialBackoffRetry(256, 1024)
-
+  private[rx] def getZKCommitter(config: ConsumerConfig) = {
+    new ZookeeperOffsetCommitter(
+      config.groupId,
+      CuratorFrameworkFactory.newClient(config.zkConnect, new ExponentialBackoffRetry(256, 1024))
+    )
+  }
   private[rx] def getConsumerConfig(zookeepers: String, group: String, autocommit: Boolean = false, startFromLatest: Boolean = false) = {
     val props = new Properties()
     props.put("group.id", group)

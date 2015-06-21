@@ -10,7 +10,7 @@ import scala.concurrent.duration._
 
 import org.scalatest.{BeforeAndAfter, FlatSpec, ShouldMatchers}
 
-class OffsetCommitterIntegrationTest extends FlatSpec with ShouldMatchers with BeforeAndAfter {
+class ZookeeperOffsetCommitterIntegrationTest extends FlatSpec with ShouldMatchers with BeforeAndAfter {
 
   var server: TestingServer = _
   var client: CuratorFramework = _
@@ -30,12 +30,12 @@ class OffsetCommitterIntegrationTest extends FlatSpec with ShouldMatchers with B
   }
 
   "OffsetCommitter" should "return no offsets given no data" in {
-    val zk = new OffsetCommitter("group", client)
+    val zk = new ZookeeperOffsetCommitter("group", client)
     zk.getOffsets(List()) should be(Map[TopicPartition, Long]())
   }
 
   it should "get offsets from zookeeper for one topic and partition" in {
-    val zk = new OffsetCommitter("test", client)
+    val zk = new ZookeeperOffsetCommitter("test", client)
     val topic = "test"
     val partition = 42
     val path = getPartitionPath("test", "test", partition)
@@ -49,7 +49,7 @@ class OffsetCommitterIntegrationTest extends FlatSpec with ShouldMatchers with B
     zk.getOffsets(List(topic -> partition)) should be(expectedOffsets)
   }
   it should "get offsets from zookeeper for multiple topics" in {
-    val zk = new OffsetCommitter("test", client)
+    val zk = new ZookeeperOffsetCommitter("test", client)
     val topic1 = "topic1"
     val topic2 = "topic2"
     val partition = 42
@@ -71,7 +71,7 @@ class OffsetCommitterIntegrationTest extends FlatSpec with ShouldMatchers with B
 
   it should "write new offsets to zookeeper" in {
     val topic = "topic"
-    val zk = new OffsetCommitter("group", client)
+    val zk = new ZookeeperOffsetCommitter("group", client)
     val offsets = Map[TopicPartition, Long](topic -> 1 -> 2)
 
     zk.setOffsets(offsets)
@@ -80,7 +80,7 @@ class OffsetCommitterIntegrationTest extends FlatSpec with ShouldMatchers with B
 
   it should "encode offsets as strings" in {
     val topic = "topic"
-    val zk = new OffsetCommitter( "group", client)
+    val zk = new ZookeeperOffsetCommitter( "group", client)
     val partition = 1
     val path = getPartitionPath("group", topic, partition)
 
@@ -95,7 +95,7 @@ class OffsetCommitterIntegrationTest extends FlatSpec with ShouldMatchers with B
 
   it should "update existing offsets in zookeeper for correct partition" in {
     val topic = "topic"
-    val zk = new OffsetCommitter( "group", client)
+    val zk = new ZookeeperOffsetCommitter( "group", client)
     val existingOffsets = Map[TopicPartition, Long](topic -> 1 -> 0, topic -> 2 -> 0)
     val newOffsets = Map[TopicPartition, Long](topic -> 1 -> 1)
 
@@ -112,7 +112,7 @@ class OffsetCommitterIntegrationTest extends FlatSpec with ShouldMatchers with B
   it should "update existing offsets in zookeeper for correct topic" in {
     val topic1 = "topic1"
     val topic2 = "topic2"
-    val zk = new OffsetCommitter( "group", client)
+    val zk = new ZookeeperOffsetCommitter( "group", client)
     val existingOffsets = Map[TopicPartition, Long](topic1 -> 1 -> 0, topic2 -> 1 -> 0)
     val newOffsets = Map[TopicPartition, Long](topic1 -> 1 -> 1)
 
@@ -127,23 +127,19 @@ class OffsetCommitterIntegrationTest extends FlatSpec with ShouldMatchers with B
   }
 
   it should "provide locks" in {
-    val zk = new OffsetCommitter("group", client)
-    val lock = zk.getLock
-    if (lock.acquire(100, SECONDS)) {
-      try {
-        "the lock" should include("lock")
-      } finally {
-        lock.release()
-      }
-    } else {
-      "failed to acquire lock" should be("impossible")
+    val zk = new ZookeeperOffsetCommitter("group", client)
+    val lock = zk.getPartitionLock("test" -> 123)
+    try {
+      lock.acquire
+      "the lock" should include("lock")
+    } finally {
+      lock.release
     }
   }
 
   it should "provide a commit hook for doing work within a zk lock" in {
     val topic = "topic"
-    val zk = new OffsetCommitter("group", client)
-    val mgr = new OffsetManager
+    val zk = new ZookeeperOffsetCommitter("group", client)
     val offsets = Map[TopicPartition, Long](topic -> 1 -> 0, topic -> 2 -> 0)
     val otherOffsets = Map[TopicPartition, Long](topic -> 1 -> 1, topic -> 2 -> 1)
 
@@ -152,6 +148,7 @@ class OffsetCommitterIntegrationTest extends FlatSpec with ShouldMatchers with B
     zk.commit(otherOffsets, { (zkOffsets, messageOffsets) =>
       zkOffsets should be(offsets)
       offsets
-    }, mgr.rebalanceOffsets)
+    })
   }
+
 }

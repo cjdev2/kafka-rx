@@ -2,7 +2,7 @@ package com.cj.kafka.rx
 
 import kafka.message.MessageAndMetadata
 
-class OffsetManager[K, V](commit: Commit = (_,_,_) => Map[TopicPartition, Long]()) {
+class OffsetManager[K, V](offsetCommitter: OffsetCommitter) {
 
   // Offset Manager keeps track of offsets per partition for a particular kafka stream
   private var currentOffsets = Map[TopicPartition, Long]()
@@ -18,27 +18,27 @@ class OffsetManager[K, V](commit: Commit = (_,_,_) => Map[TopicPartition, Long](
     }
   }
 
-  def rebalanceOffsets(externalOffsets: OffsetMap, internalOffsets: OffsetMap): OffsetMap = {
+  def manage(externalOffsets: OffsetMap, internalOffsets: OffsetMap): OffsetMap = {
     // kafka rebalancing can cause skewed views of partition ownership
-    // by reconciling our offsets with another view, we can determine which we have ownership over
-    currentOffsets = currentOffsets.filter { case (topicPartition, offset) =>
+    currentOffsets = currentOffsets.filter { case (topicPartition, internalOffset) =>
+      // we only own those topic partitions where our offsets are higher then external
       val externalOffset = externalOffsets.getOrElse(topicPartition, -1L)
-      offset >= externalOffset
+      internalOffset >= externalOffset
     }
     internalOffsets filter { case (topicPartition, offset) =>
       currentOffsets.contains(topicPartition)
-    } map { case (topicPartition, offset) =>
-      topicPartition -> (offset + 1)
     }
   }
 
-  def mergeWith(offsets: OffsetMap, userMerge: OffsetMerge): OffsetMap = {
-    commit(offsets, userMerge, rebalanceOffsets)
+  def commitWith(internalOffsets: OffsetMap)(merge: OffsetMerge): OffsetMap = {
+    offsetCommitter.commit(internalOffsets, { case (externalOffsets, _) =>
+      manage(externalOffsets, merge(externalOffsets, internalOffsets))
+    })
   }
 
   private def manageMessage(msg:  MessageAndMetadata[K, V]): Some[Message[K, V]] = {
     currentOffsets += msg.topic -> msg.partition -> msg.offset
-    Some(copyMessage(msg, currentOffsets, mergeWith))
+    Some(getMessage(msg, commitWith(currentOffsets)))
   }
 
 }

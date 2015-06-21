@@ -26,12 +26,11 @@ class RxConnectorIntegrationTest extends FlatSpec with ShouldMatchers with Befor
     // kafka's iterable only supports single stateful iterator
     // by having a cache we can circumvent this and get a 'view' of the kafka iterator
     val server = new TestingServer()
-    val conn = new RxConnector("test", "test")
     val client = CuratorFrameworkFactory.newClient(server.getConnectString, new RetryUntilElapsed(500,50))
+    val zk: ZookeeperOffsetCommitter = new ZookeeperOffsetCommitter("test", client)
+    val conn = new RxConnector("test", "test", committer = zk)
     try {
       server.start()
-      client.start()
-      val zk: OffsetCommitter = new OffsetCommitter("test", client)
       val messages = getFakeKafkaMessages(10)
       val stream: Observable[Long] = conn.getObservableStream(messages, zk).map(_.offset).cache(10)
 
@@ -47,24 +46,21 @@ class RxConnectorIntegrationTest extends FlatSpec with ShouldMatchers with Befor
     }
   }
 
-  it should "commit offsets to zookeeper through message checkpoints" in {
+  it should "commit message offsets through zookeeper" in {
     val server = new TestingServer()
     val client = CuratorFrameworkFactory.newClient(server.getConnectString, new RetryUntilElapsed(500,50))
-    val conn = new RxConnector("test", "test", curator = client)
+    val zk: ZookeeperOffsetCommitter = new ZookeeperOffsetCommitter("test", client)
+    val conn = new RxConnector("test", "test", committer = zk)
+    val fakeMessages = getFakeKafkaMessages(10)
+    val topicPartitions = fakeMessages map { message => message.topic -> message.partition}
+    val expectedOffsets = (topicPartitions map { case (topic, partition) => topic -> partition -> (partition + 1) }).toMap
     try {
       server.start()
-      client.start()
-      val zk: OffsetCommitter = new OffsetCommitter("test", client)
-      val fakeMessages = getFakeKafkaMessages(10)
       val stream = conn.getObservableStream(fakeMessages, zk) map { message =>
         message.copy(value = message.offset)
       }
-      val messages = stream.toBlocking.toList
-      messages.last.commit()
-      val adjustedOffsets = messages.last.consumerOffsets map { case (topicPartition, offset) =>
-        topicPartition -> (offset + 1)
-      }
-      zk.getOffsets(messages.last.consumerOffsets.keys) should be(adjustedOffsets)
+      stream.toBlocking.toList.last.commit() should be(expectedOffsets)
+      zk.getOffsets(topicPartitions) should be(expectedOffsets)
     } finally {
       server.close()
       client.close()
