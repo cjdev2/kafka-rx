@@ -20,27 +20,26 @@
 
     <section class="main-content">
       <h1>
-<a id="kafka-rx--" class="anchor" href="#kafka-rx--" aria-hidden="true"><span class="octicon octicon-link"></span></a>kafka-rx <a href="https://travis-ci.org/cjdev/kafka-rx"><img src="https://travis-ci.org/cjdev/kafka-rx.svg" alt="Build Status"></a> <a href="http://search.maven.org/#search%7Cgav%7C1%7Cg%3A%22com.cj%22%20AND%20a%3A%22kafka-rx_2.10%22"><img src="https://img.shields.io/maven-central/v/com.cj/kafka-rx_2.10.svg" alt="Maven Central"></a>
+<a id="kafka-rx--" class="anchor" href="#kafka-rx--" aria-hidden="true"><span class="octicon octicon-link"></span></a>kafka-rx <a href="https://travis-ci.org/cjdev/kafka-rx"><img src="https://travis-ci.org/cjdev/kafka-rx.svg" alt="Build Status"></a> <a href="http://search.maven.org/#search%7Cgav%7C1%7Cg%3A%22com.cj%22%20AND%20a%3A%22kafka-rx_2.11%22"><img src="https://img.shields.io/maven-central/v/com.cj/kafka-rx_2.11.svg" alt="Maven Central"></a>
 </h1>
 
-<p>General Purpose Kafka Client that Just Behaves</p>
+<p>General Purpose <a href="https://kafka.apache.org">Kafka</a> Client that Just Behaves</p>
 
 <h4>
 <a id="features" class="anchor" href="#features" aria-hidden="true"><span class="octicon octicon-link"></span></a>Features</h4>
 
 <ul>
-<li>thin adapter around kafka's high level producer and consumer api</li>
+<li>thin, reactive adapter around kafka's high level producer and consumer</li>
 <li>per message, fine grained commits semantics</li>
-<li>offset tracking for local rebalancing and replay supression</li>
-<li>reactive api using rx-scala observables</li>
+<li>offset management to keep track of consumer positions</li>
 </ul>
 
 <h4>
-<a id="subscribing-to-a-message-stream" class="anchor" href="#subscribing-to-a-message-stream" aria-hidden="true"><span class="octicon octicon-link"></span></a>Subscribing to a message stream:</h4>
+<a id="consuming-messages" class="anchor" href="#consuming-messages" aria-hidden="true"><span class="octicon octicon-link"></span></a>Consuming messages:</h4>
 
-<p>kafka-rx provides a push alternative to kafka's pull-based iterable stream</p>
+<p>kafka-rx provides a push alternative to kafka's pull-based stream</p>
 
-<p>To connect to your zookeeper cluster and process kafka streams:</p>
+<p>To connect to your zookeeper cluster and process a stream:</p>
 
 <div class="highlight highlight-scala"><pre><span class="pl-k">val</span> <span class="pl-en">connector</span> <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">RxConnector</span>(<span class="pl-s"><span class="pl-pds">"</span>zookeeper:2181<span class="pl-pds">"</span></span>, <span class="pl-s"><span class="pl-pds">"</span>consumer-group<span class="pl-pds">"</span></span>)
 
@@ -50,6 +49,8 @@ connector.getMessageStream(<span class="pl-s"><span class="pl-pds">"</span>cool-
   .foreach(println)
 
 connector.shutdown()</pre></div>
+
+<p>All of the standard <a href="http://rxmarbles.com/">rx transforms</a> are available on the resulting stream.</p>
 
 <h4>
 <a id="producing-messages" class="anchor" href="#producing-messages" aria-hidden="true"><span class="octicon octicon-link"></span></a>Producing messages</h4>
@@ -66,21 +67,18 @@ connector.shutdown()</pre></div>
       }
   }</pre></div>
 
-<p>Check out the <a href="examples/TopicTransformProducer.scala">words-to-WORDS</a> producer for a full working example.</p>
+<p>Check out the <a href="examples/TopicTransformProducer.scala">words-to-WORDS</a> producer or the <a href="examples/twitter-stream">twitter-stream</a> demo for a full working example.</p>
 
 <h4>
 <a id="reliable-message-processing" class="anchor" href="#reliable-message-processing" aria-hidden="true"><span class="octicon octicon-link"></span></a>Reliable Message Processing</h4>
 
 <p>kafka-rx was built with reliable message processing in mind</p>
 
-<p>To support this, every kafka-rx message has a <code>.commit()</code> method which optionally takes a user provided merge function, giving the program an opportunity to reconcile with zookeeper and manage delivery guarantees.</p>
+<p>To support this, every kafka-rx message has a <code>.commit()</code> method which optionally takes a user provided merge function, giving the program an opportunity to reconcile offsets with zookeeper and manage delivery guarantees.</p>
 
 <div class="highlight highlight-scala"><pre>stream.buffer(<span class="pl-c1">23</span>).foreach { bucket <span class="pl-k">=&gt;</span>
-  bucket.last.commit { (zkOffsets, proposedOffsets) <span class="pl-k">=&gt;</span>
-    <span class="pl-k">if</span> (looksGood(zkOffsets)) proposedOffsets <span class="pl-c">// go ahead and commit!</span>
-    <span class="pl-k">else</span> zkOffsets <span class="pl-c">// or leave things as they were</span>
-    <span class="pl-c">// or something else...</span>
-  }
+  process(bucket)
+  bucket.last.commit()
 }</pre></div>
 
 <p>If you can afford possible gaps in message processing you can also use kafka's automatic offset commit behavior, but you are encouraged to manage commits yourself.</p>
@@ -93,10 +91,9 @@ connector.shutdown()</pre></div>
 <h4>
 <a id="configuration" class="anchor" href="#configuration" aria-hidden="true"><span class="octicon octicon-link"></span></a>Configuration</h4>
 
-<p>This and other consumer configuration can be provided through kafka's <code>ConsumerConfig</code>.</p>
+<p>Wherever possible, kafka-rx delegates to kafka's internal configuration.</p>
 
-<div class="highlight highlight-scala"><pre><span class="pl-k">val</span> <span class="pl-en">conf</span> <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">ConsumerConfig</span>(myProperties)
-<span class="pl-k">val</span> <span class="pl-en">conn</span> <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">RxConnector</span>(conf)</pre></div>
+<p>Use kafka's <code>ConsumerConfig</code> for configuring the consumer, and <code>ProducerConfig</code> for configuring your producer.</p>
 
 <h4>
 <a id="including-in-your-project" class="anchor" href="#including-in-your-project" aria-hidden="true"><span class="octicon octicon-link"></span></a>Including in your project</h4>
@@ -108,14 +105,21 @@ connector.shutdown()</pre></div>
 <div class="highlight highlight-xml"><pre>&lt;<span class="pl-ent">dependency</span>&gt;
   &lt;<span class="pl-ent">groupId</span>&gt;com.cj&lt;/<span class="pl-ent">groupId</span>&gt;
   &lt;<span class="pl-ent">artifactId</span>&gt;kafka-rx_2.11&lt;/<span class="pl-ent">artifactId</span>&gt;
-  &lt;<span class="pl-ent">version</span>&gt;0.2.0-SNAPSHOT&lt;/<span class="pl-ent">version</span>&gt;
+  &lt;<span class="pl-ent">version</span>&gt;0.2.0&lt;/<span class="pl-ent">version</span>&gt;
 &lt;/<span class="pl-ent">dependency</span>&gt;</pre></div>
 
 <p>From sbt:</p>
 
-<div class="highlight highlight-scala"><pre>libraryDependencies <span class="pl-k">+</span><span class="pl-k">=</span> <span class="pl-s"><span class="pl-pds">"</span>com.cj<span class="pl-pds">"</span></span> <span class="pl-k">%</span> <span class="pl-s"><span class="pl-pds">"</span>kafka-rx<span class="pl-pds">"</span></span> <span class="pl-k">%</span> <span class="pl-s"><span class="pl-pds">"</span>0.2.0-SNAPSHOT<span class="pl-pds">"</span></span></pre></div>
+<div class="highlight highlight-scala"><pre>libraryDependencies <span class="pl-k">+</span><span class="pl-k">=</span> <span class="pl-s"><span class="pl-pds">"</span>com.cj<span class="pl-pds">"</span></span> <span class="pl-k">%</span> <span class="pl-s"><span class="pl-pds">"</span>kafka-rx<span class="pl-pds">"</span></span> <span class="pl-k">%</span> <span class="pl-s"><span class="pl-pds">"</span>0.2.0<span class="pl-pds">"</span></span></pre></div>
+
+<h4>
+<a id="videos--examples" class="anchor" href="#videos--examples" aria-hidden="true"><span class="octicon octicon-link"></span></a>Videos &amp; Examples</h4>
 
 <p>For more code and help getting started, see the <a href="examples/">examples</a>.</p>
+
+<p>Or, if videos are more your style:</p>
+
+<p><a href="http://www.youtube.com/watch?v=S-Ynyel9pkk"><img src="http://img.youtube.com/vi/S-Ynyel9pkk/0.jpg" alt="stream processing with kafka-rx"></a></p>
 
 <h4>
 <a id="contributing" class="anchor" href="#contributing" aria-hidden="true"><span class="octicon octicon-link"></span></a>Contributing</h4>
