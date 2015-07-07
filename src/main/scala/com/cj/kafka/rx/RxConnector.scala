@@ -22,8 +22,7 @@ class RxConnector(config: ConsumerConfig, committer: OffsetCommitter) {
   }
 
   def getMessageStreams[K, V](topic: String, numStreams: Int = 1, keyDecoder: Decoder[K] = new DefaultDecoder, valueDecoder: Decoder[V] = new DefaultDecoder) = {
-    ensureKafkaConsumer()
-    val kafkaStreams: Seq[KafkaStream[K, V]] = kafkaConsumer.createMessageStreamsByFilter[K, V](
+    val kafkaStreams: Seq[KafkaStream[K, V]] = ensureKafkaConsumer().createMessageStreamsByFilter[K, V](
       new Whitelist(topic),
       numStreams = numStreams,
       keyDecoder = keyDecoder,
@@ -33,7 +32,7 @@ class RxConnector(config: ConsumerConfig, committer: OffsetCommitter) {
       kafkaStreams.map(getObservableStream[K, V])
     } else {
       kafkaStreams.map({ case stream =>
-        getObservableStream[K, V](stream, offsetCommitter)
+        getObservableStream[K, V](stream, ensureOffsetCommitter())
       })
     }
   }
@@ -45,7 +44,7 @@ class RxConnector(config: ConsumerConfig, committer: OffsetCommitter) {
   }
 
   protected[rx] def getObservableStream[K, V](stream: Iterable[MessageAndMetadata[K, V]], zk: OffsetCommitter): Observable[Message[K, V]] = {
-    if (!config.autoCommitEnable) ensureCommitConnection()
+    offsetCommitter.start()
     val manager = new OffsetManager[K, V](zk)
     Observable
       .from(stream)
@@ -54,17 +53,18 @@ class RxConnector(config: ConsumerConfig, committer: OffsetCommitter) {
       .map(_.get)
   }
 
-  private def ensureKafkaConsumer(): Unit = {
+  private def ensureKafkaConsumer(): ConsumerConnector = {
     if (kafkaConsumer == null) {
       kafkaConsumer = Consumer.create(config)
     }
+    kafkaConsumer
   }
 
-  private def ensureCommitConnection() = {
+  private def ensureOffsetCommitter(): OffsetCommitter = {
     if (offsetCommitter == null) {
       offsetCommitter = RxConnector.getZKCommitter(config)
     }
-    offsetCommitter.start()
+    offsetCommitter
   }
 
   def shutdown() = {
