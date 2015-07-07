@@ -5,8 +5,11 @@ import kafka.serializer.DefaultDecoder
 import org.apache.curator.framework.CuratorFrameworkFactory
 import org.apache.curator.retry.RetryUntilElapsed
 import org.apache.curator.test.TestingServer
+import org.apache.kafka.clients.producer.MockProducer
 import org.scalatest._
 import rx.lang.scala.Observable
+
+import collection.JavaConversions._
 
 class RxConnectorIntegrationTest extends FlatSpec with ShouldMatchers with BeforeAndAfter {
 
@@ -18,8 +21,8 @@ class RxConnectorIntegrationTest extends FlatSpec with ShouldMatchers with Befor
     val list = stream.toBlocking.toList
 
     list.size should be(2)
-    list.head.offset should be(1)
-    list.last.offset should be(2)
+    list.head.offset should be(0)
+    list.last.offset should be(1)
   }
 
   it should "cache iterables for subsequent iteration" in {
@@ -39,7 +42,7 @@ class RxConnectorIntegrationTest extends FlatSpec with ShouldMatchers with Befor
 
       evens.size should be(5)
       odds.size should be(5)
-      odds.map(_+1) should be(evens)
+      evens.map(_+1) should be(odds)
     } finally {
       server.close()
       client.close()
@@ -67,9 +70,19 @@ class RxConnectorIntegrationTest extends FlatSpec with ShouldMatchers with Befor
     }
   }
 
+  it should "deliver messages to a producer" in {
+    val fakeStream = Observable.from(getFakeKafkaMessages(10) map { msg => getMessage(msg) })
+    val producer = new MockProducer(true)
+    val savedMessages = fakeStream.saveToKafka(producer, "test-topic").toBlocking.toList
+    val history = producer.history
+    savedMessages.size should be(10)
+    history.size should be(10)
+    new String(history(5).value) should be("5")
+  }
+
   def getFakeKafkaMessages(numMessages: Int): Iterable[MessageAndMetadata[Array[Byte], Array[Byte]]] = {
     val decoder = new DefaultDecoder()
-    (1 to numMessages) map { num =>
+    (0 to numMessages - 1) map { num =>
       val rawMessage = new kafka.message.Message(num.toString.getBytes)
       MessageAndMetadata(topic = num.toString, partition = num, offset = num.toLong, rawMessage = rawMessage, keyDecoder = decoder, valueDecoder = decoder)
     }
