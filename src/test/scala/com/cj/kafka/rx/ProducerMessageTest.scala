@@ -30,8 +30,8 @@ class ProducerMessageTest extends FlatSpec with Matchers with BeforeAndAfter {
         val metadataStream = stream.filter { m =>
             pred(new String(m.value, "UTF-8"))
         }.map { m =>
-            m.produce(m.value, m.value)
-        }.saveToKafka(producer, topicName)
+            m.produce(topicName, m.value, m.value)
+        }.saveToKafka(producer)
             .toBlocking
             .toList
 

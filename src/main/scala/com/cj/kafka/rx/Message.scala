@@ -6,12 +6,12 @@ case class Message[K, V](
   topic: String,
   partition: Int,
   offset: Long,
-  private[rx] val commitWith: PartialCommit = defaultCommit) {
+  private[rx] val commitfn: Commit = defaultCommit) {
 
   val topicPartition = topic -> partition
 
   def commit(merge: OffsetMerge = defaultMerge): OffsetMap = {
-    commitWith(merge)
+    commitfn(merge)
   }
 
   override def equals(other: Any) = {
@@ -24,20 +24,20 @@ case class Message[K, V](
     }
   }
 
-  def produce: ProducedMessage[K, V] = {
-    produce[K, V](key, value, partition)
+  def produce(topic: String): ProducedMessage[K, V] = {
+    produce[K, V](topic, partition, key, value)
   }
 
-  def produce[v](value: v): ProducedMessage[Null, v] = {
-    produce[Null, v](null, value)
+  def produce[v](topic: String, value: v): ProducedMessage[Null, v] = {
+    produce[Null, v](topic, null, value)
   }
 
-  def produce[k, v](key: k, value: v): ProducedMessage[k, v] = {
-    new ProducedMessage(key, value, sourceMessage = this)
+  def produce[k, v](topic: String, key: k, value: v): ProducedMessage[k, v] = {
+    new ProducedMessage[k, v](this, topic, key, value)
   }
 
-  def produce[k, v](key: k, value: v, partition: Int): ProducedMessage[k, v] = {
-    new ProducedMessage(key = key, value = value, partition=partition, this)
+  def produce[k, v](topic: String, partition: Int, key: k, value: v): ProducedMessage[k, v] = {
+    new ProducedMessage[k, v](this, topic, partition, key, value)
   }
 
 }

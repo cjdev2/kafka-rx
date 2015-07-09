@@ -11,11 +11,11 @@ package object rx {
   type TopicPartition = (String, Int)
   type OffsetMap = Map[TopicPartition, Long]
   type OffsetMerge = (OffsetMap, OffsetMap) => OffsetMap
-  type PartialCommit = (OffsetMerge) => OffsetMap
+  type Commit = (OffsetMerge) => OffsetMap
 
   private[rx] val defaultMerge: OffsetMerge = { case (theirs, ours) => ours }
   private[rx] val defaultOffsets = Map[TopicPartition, Long]()
-  private[rx] val defaultCommit: PartialCommit = { merge: OffsetMerge =>
+  private[rx] val defaultCommit: Commit = { merge: OffsetMerge =>
     merge(defaultOffsets, defaultOffsets)
   }
 
@@ -24,21 +24,21 @@ package object rx {
 
   private[rx] def getMessage[K, V](
       message: MessageAndMetadata[K, V],
-      commit: PartialCommit = defaultCommit): Message[K, V] = {
+      commit: Commit = defaultCommit): Message[K, V] = {
     Message[K, V](
       key = message.key(),
       value = message.message(),
       topic = message.topic,
       partition = message.partition,
       offset = message.offset,
-      commitWith = commit
+      commitfn = commit
     )
   }
 
   private[rx] def getResponseStream[K, V](
     producer: Producer[K, V],
     record: ProducerRecord[K, V],
-    commit: PartialCommit = defaultCommit): Observable[Message[K, V]] = {
+    commit: Commit = defaultCommit): Observable[Message[K, V]] = {
     val subject = AsyncSubject[Message[K, V]]()
     producer.send(record, new Callback {
       def onCompletion(metadata: RecordMetadata, exception: Exception): Unit = {
@@ -52,7 +52,7 @@ package object rx {
               partition = metadata.partition,
               topic = metadata.topic,
               offset = metadata.offset,
-              commitWith = commit
+              commitfn = commit
             )
           )
         }
@@ -64,23 +64,31 @@ package object rx {
   
   implicit class MessageProducerObservable[K, V](stream: Observable[Message[K, V]]) {
     def saveToKafka(producer: Producer[K, V], topic: String): Observable[Message[K, V]] = {
-      stream.map(_.produce).saveToKafka(producer, topic)
+      stream.flatMap { message =>
+        getResponseStream(
+          producer,
+          new ProducerRecord[K, V](topic, message.key, message.value),
+          message.commitfn
+        )
+      }
     }
   }
 
   implicit class ProducerRecordObservable[K, V, k, v](stream: Observable[ProducerRecord[K, V]]) {
     def saveToKafka(producer: Producer[K, V]): Observable[Message[K, V]] = {
-      stream.flatMap(getResponseStream(producer, _))
+      stream.flatMap { record =>
+        getResponseStream(producer, record)
+      }
     }
   }
 
   implicit class ProducedMessageObservable[K, V](stream: Observable[ProducedMessage[K, V]]) {
-    def saveToKafka(producer: Producer[K, V], topic: String): Observable[Message[K, V]] = {
-      stream.flatMap { message =>
+    def saveToKafka(producer: Producer[K, V]): Observable[Message[K, V]] = {
+      stream.flatMap { produced =>
         getResponseStream(
           producer,
-          message.toProducerRecord(topic),
-          message.sourceMessage.commitWith
+          produced.record,
+          produced.origin.commitfn
         )
       }
     }

@@ -98,7 +98,7 @@ class OffsetManagerTest extends FlatSpec with ShouldMatchers {
   }
   it should "provide its checkpoint function to all the messages" in {
 
-    val failingMerge: PartialCommit = { case _ =>
+    val failingMerge: Commit = { case _ =>
       throw new RuntimeException("This function should never be called")
       Map[TopicPartition, Long]()
     }
@@ -113,7 +113,7 @@ class OffsetManagerTest extends FlatSpec with ShouldMatchers {
       }
     }
 
-    val message: RxMessage = Message(value="test".getBytes, topic="test-topic", partition=0, offset=0L, commitWith=failingMerge)
+    val message: RxMessage = Message(value="test".getBytes, topic="test-topic", partition=0, offset=0L, commitfn=failingMerge)
     val manager = new OffsetManager[Array[Byte], Array[Byte]](offsetCommitter=HappyCommitter)
 
     val checkedMessage = manager.check(kafkaRawMessage(message))
