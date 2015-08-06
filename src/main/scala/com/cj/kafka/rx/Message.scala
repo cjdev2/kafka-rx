@@ -6,13 +6,12 @@ case class Message[K, V](
   topic: String,
   partition: Int,
   offset: Long,
-  private[rx] val commitfn: Commit = defaultCommit) {
+  private[rx] val commitfn: Commit = defaultCommit)
+  extends Committable[V] {
 
   val topicPartition = topic -> partition
 
-  def commit(merge: OffsetMerge = defaultMerge): OffsetMap = {
-    commitfn(merge)
-  }
+  def commit(merge: OffsetMerge): OffsetMap = commitfn(merge)
 
   override def equals(other: Any) = {
     other match {
