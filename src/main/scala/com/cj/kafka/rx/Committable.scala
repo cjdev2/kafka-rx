@@ -4,4 +4,12 @@ trait Committable[V] {
   def value: V
   def commit(offsetMerge: OffsetMerge): OffsetMap
   def commit(): OffsetMap = commit(defaultMerge)
+  def derive[R](newValue: R): Committable[R] = {
+    val origin = this
+    new Committable[R] {
+      def value: R = newValue
+      def commit(offsetMerge: OffsetMerge): OffsetMap = origin.commit(offsetMerge)
+      override def commit(): OffsetMap = origin.commit()
+    }
+  }
 }
