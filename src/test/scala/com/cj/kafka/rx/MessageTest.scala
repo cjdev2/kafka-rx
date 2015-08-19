@@ -5,7 +5,7 @@ import org.scalatest.{Matchers, FlatSpec}
 
 class MessageTest extends FlatSpec with Matchers {
 
-  val originalMessage = new Message("Key", 1, "topic", 0,0L)
+  val originalMessage = new Message("Key", 1, "topic", 2, 3L)
   def transform(x: Int)  = x + 1
 
 
@@ -33,7 +33,36 @@ class MessageTest extends FlatSpec with Matchers {
   }
 
   "Message" should "keep original topic" in {
-    true should be("not yet implemented")
+    //given
+    //(setup)
+
+    //when
+    val newMessage = originalMessage.map(transform)
+
+    //then
+    newMessage.topic should be(originalMessage.topic)
+  }
+
+  "Message" should "keep original partition" in {
+    //given
+    //(setup)
+
+    //when
+    val newMessage = originalMessage.map(transform)
+
+    //then
+    newMessage.partition should be(originalMessage.partition)
+  }
+
+  "Message" should "keep original offset" in {
+    //given
+    //(setup)
+
+    //when
+    val newMessage = originalMessage.map(transform)
+
+    //then
+    newMessage.offset should be(originalMessage.offset)
   }
 
 
