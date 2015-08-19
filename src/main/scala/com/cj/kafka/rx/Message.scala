@@ -39,4 +39,8 @@ case class Message[K, V](
     new ProducedMessage[k, v](this, topic, partition, key, value)
   }
 
+  def map[R](fn: (V)=>R): Message[K,R] = {
+    new Message(key, fn(value), topic, partition, offset, commitfn)
+  }
+
 }
