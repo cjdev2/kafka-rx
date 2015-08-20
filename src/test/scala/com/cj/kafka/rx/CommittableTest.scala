@@ -42,6 +42,27 @@ class CommittableTest extends FlatSpec with ShouldMatchers {
 
   }
 
+  it should "return a commitable with the same commit function after mapping" in {
+    //given
+    var isCommitted = false
+    val committable = new Committable[Int] {
+      override def value: Int = 1
 
+      override def commit(offsetMerge: OffsetMerge): OffsetMap = {
+        isCommitted = true
+        Map()
+      }
+    }
+
+    def fn(x: Int) = {x + 1}
+
+    //when
+    val newCommittable = committable.map(fn)
+    newCommittable.commit()
+
+    //then
+    isCommitted should be (true)
+
+  }
 
 }
