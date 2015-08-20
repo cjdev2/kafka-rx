@@ -22,4 +22,26 @@ class CommittableTest extends FlatSpec with ShouldMatchers {
     passing should be(true)
   }
 
+  it should "map the value of a comittable given a function" in {
+    //given
+    val committable = new Committable[Int] {
+      override def value: Int = 1
+
+      override def commit(offsetMerge: OffsetMerge): OffsetMap = ???
+    }
+
+
+    def fn(x: Int) = {x + 1}
+
+    //when
+    val newCommittable = committable.map(fn)
+
+    //then
+    newCommittable.value should be (fn(committable.value))
+
+
+  }
+
+
+
 }

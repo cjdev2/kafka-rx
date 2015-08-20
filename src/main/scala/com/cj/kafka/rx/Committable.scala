@@ -12,4 +12,7 @@ trait Committable[V] {
       override def commit(): OffsetMap = origin.commit()
     }
   }
+  def map[R](fn: (V) => R) : Committable[R] = {
+    derive(fn(value))
+  }
 }
