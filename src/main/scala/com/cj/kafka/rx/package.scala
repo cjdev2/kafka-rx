@@ -5,7 +5,6 @@ package object rx {
   import _root_.rx.lang.scala.subjects.AsyncSubject
   import _root_.rx.lang.scala.Observable
   import kafka.message.MessageAndMetadata
-  import org.apache.curator.utils.ZKPaths
   import org.apache.kafka.clients.producer.{Producer, ProducerRecord, RecordMetadata, Callback}
 
   type TopicPartition = (String, Int)
@@ -18,9 +17,6 @@ package object rx {
   private[rx] val defaultCommit: Commit = { merge: OffsetMerge =>
     merge(defaultOffsets, defaultOffsets)
   }
-
-  private[rx] def getPartitionPath(group: String, topic: String, part: Int) =
-    ZKPaths.makePath(s"/consumers/$group/offsets/$topic", part.toString)
 
   private[rx] def getMessage[K, V](
       message: MessageAndMetadata[K, V],
@@ -70,13 +66,13 @@ package object rx {
     }
   }
 
-  implicit class ProducedMessageObservable[K, V](stream: Observable[ProducedMessage[K, V]]) {
+  implicit class ProducedMessageObservable[K, V](stream: Observable[Committable[ProducerRecord[K, V]]]) {
     def saveToKafka(producer: Producer[K, V]): Observable[Message[K, V]] = {
-      stream.flatMap { produced =>
+      stream.flatMap { committable =>
         getResponseStream(
           producer,
-          produced.record,
-          produced.origin.commitfn
+          committable.value,
+          committable.commitfn
         )
       }
     }

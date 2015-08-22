@@ -4,6 +4,7 @@ import com.google.common.base.Charsets
 import org.apache.curator.framework.CuratorFramework
 import org.apache.curator.framework.imps.CuratorFrameworkState
 import org.apache.curator.framework.recipes.locks.InterProcessMutex
+import org.apache.curator.utils.ZKPaths
 
 class ZookeeperLock(zk: CuratorFramework, path: String) extends PartitionLock {
   val lock = new InterProcessMutex(zk, path)
@@ -12,6 +13,9 @@ class ZookeeperLock(zk: CuratorFramework, path: String) extends PartitionLock {
 }
 
 class ZookeeperOffsetCommitter(group: String, zk: CuratorFramework) extends OffsetCommitter with SynchronizedCommitter {
+
+  def getPartitionPath(topic: String, part: Int) =
+    ZKPaths.makePath(s"/consumers/$group/offsets/$topic", part.toString)
 
   override def start() = {
     if (zk.getState != CuratorFrameworkState.STARTED) {
@@ -25,7 +29,7 @@ class ZookeeperOffsetCommitter(group: String, zk: CuratorFramework) extends Offs
   def getOffsets(topicPartitions: Iterable[TopicPartition]): OffsetMap = {
      topicPartitions.flatMap { topicPartition =>
        val (topic, partition) = topicPartition
-       val path = getPartitionPath(group, topic, partition)
+       val path = getPartitionPath(topic, partition)
        Option(zk.checkExists.forPath(path)) match {
          case None => List()
          case Some(filestats) =>
@@ -40,7 +44,7 @@ class ZookeeperOffsetCommitter(group: String, zk: CuratorFramework) extends Offs
   def setOffsets(offsets: OffsetMap): OffsetMap = {
     offsets foreach { case (topicPartition, offset) =>
       val (topic,partition) = topicPartition
-      val nodePath = getPartitionPath(group, topic, partition)
+      val nodePath = getPartitionPath(topic, partition)
       val bytes = offset.toString.getBytes(Charsets.UTF_8)
       Option(zk.checkExists.forPath(nodePath)) match {
         case None =>

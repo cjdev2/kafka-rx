@@ -34,11 +34,20 @@ class ZookeeperOffsetCommitterIntegrationTest extends FlatSpec with ShouldMatche
     zk.getOffsets(List()) should be(Map[TopicPartition, Long]())
   }
 
+  it should "calculate partition paths" in {
+    val topic = "topic"
+    val group = "consumer-group"
+    val zk = new ZookeeperOffsetCommitter(group, client)
+    val path = zk.getPartitionPath(topic, 1)
+    path should be(s"/consumers/$group/offsets/$topic/1")
+
+  }
+
   it should "get offsets from zookeeper for one topic and partition" in {
     val zk = new ZookeeperOffsetCommitter("test", client)
     val topic = "test"
     val partition = 42
-    val path = getPartitionPath("test", "test", partition)
+    val path = zk.getPartitionPath("test", partition)
     val expectedOffset = 1337L
     val bytes = expectedOffset.toString.getBytes
     val expectedOffsets = Map[TopicPartition, Long](topic -> partition -> expectedOffset)
@@ -53,8 +62,8 @@ class ZookeeperOffsetCommitterIntegrationTest extends FlatSpec with ShouldMatche
     val topic1 = "topic1"
     val topic2 = "topic2"
     val partition = 42
-    val path1 = getPartitionPath("test", topic1, partition)
-    val path2 = getPartitionPath("test", topic2, partition)
+    val path1 = zk.getPartitionPath(topic1, partition)
+    val path2 = zk.getPartitionPath(topic2, partition)
     val expectedOffset = 1337L
     val bytes = expectedOffset.toString.getBytes
     val expectedOffsets1 = Map[TopicPartition, Long](topic1 -> partition -> expectedOffset)
@@ -82,7 +91,7 @@ class ZookeeperOffsetCommitterIntegrationTest extends FlatSpec with ShouldMatche
     val topic = "topic"
     val zk = new ZookeeperOffsetCommitter( "group", client)
     val partition = 1
-    val path = getPartitionPath("group", topic, partition)
+    val path = zk.getPartitionPath(topic, partition)
 
     val offsets = Map[TopicPartition, Long](topic -> partition -> 42)
 

@@ -11,7 +11,7 @@
 
     <groupId>com.cj</groupId>
     <artifactId>kafka-rx_2.11</artifactId>
-    <version>0.2.4-SNAPSHOT</version>
+    <version>0.2.1a-SNAPSHOT</version>
 
     <properties>
         <kafka.version>0.8.2.1</kafka.version>
