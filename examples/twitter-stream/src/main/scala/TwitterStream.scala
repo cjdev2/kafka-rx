@@ -31,8 +31,8 @@ object TwitterStream {
       getTopic(tweet, namespace, topics)
     } flatMap { case (topic, subStream) =>
       subStream
-        .map(toProducerMessage)
-        .saveToKafka(kafkaProducer, topic)
+        .map(toProducerRecord(topic, _))
+        .saveToKafka(kafkaProducer)
     } map { message: Message[String, String] =>
       formatKafkaMessage(message)
     }

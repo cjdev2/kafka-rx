@@ -1,3 +1,4 @@
+import org.apache.kafka.clients.producer.ProducerRecord
 import rx.lang.scala.Observable
 import rx.lang.scala.subjects.PublishSubject
 import twitter4j._
@@ -42,10 +43,11 @@ object TwitterUtils {
     subject
   }
 
-  def toProducerMessage(tweet: Status) = {
-    ProducerMessage(
-      key = tweet.getUser.getScreenName,
-      value = TwitterObjectFactory.getRawJSON(tweet)
+  def toProducerRecord(topic: String, tweet: Status) = {
+    new ProducerRecord[String, String](
+      topic,
+      tweet.getUser.getScreenName,
+      TwitterObjectFactory.getRawJSON(tweet)
     )
   }
 

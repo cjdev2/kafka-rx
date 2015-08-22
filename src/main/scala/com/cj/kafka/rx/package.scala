@@ -61,18 +61,6 @@ package object rx {
     })
     subject
   }
-  
-  implicit class MessageProducerObservable[K, V](stream: Observable[Message[K, V]]) {
-    def saveToKafka(producer: Producer[K, V], topic: String): Observable[Message[K, V]] = {
-      stream.flatMap { message =>
-        getResponseStream(
-          producer,
-          new ProducerRecord[K, V](topic, message.key, message.value),
-          message.commitfn
-        )
-      }
-    }
-  }
 
   implicit class ProducerRecordObservable[K, V, k, v](stream: Observable[ProducerRecord[K, V]]) {
     def saveToKafka(producer: Producer[K, V]): Observable[Message[K, V]] = {

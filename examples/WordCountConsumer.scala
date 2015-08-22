@@ -1,4 +1,5 @@
 import com.cj.kafka.rx.RxConnector
+import kafka.serializer.StringDecoder
 import scala.concurrent.duration._
 
 object WordCountConsumer extends App {
@@ -8,11 +9,12 @@ object WordCountConsumer extends App {
 
   val conn = new RxConnector("localhost:2181", "word-counter")
 
-  val sentences = getStringStream("test")
+  val decoder = new StringDecoder
+  val sentences = conn.getMessageStream("test", keyDecoder = decoder, valueDecoder = decoder)
 
   // if we split apart sentences we get words
-  val words = sentences.flatMapIterable { sentence =>
-    sentence.split("\\s+")
+  val words = sentences.flatMapIterable { message =>
+    message.value.split("\\s+")
   }
 
   // if we collect words we can calculate frequencies
@@ -22,9 +24,6 @@ object WordCountConsumer extends App {
 
   // sample results once a second instead of once per update
   counts.sample(1 second).foreach(println)
-
-  def getStringStream(topic: String) =
-    conn.getMessageStream(topic).map(_.value).map(new String(_))
 
   def empty = Map[String, Int]().withDefaultValue(0)
 

@@ -17,12 +17,13 @@ object TopicTransformProducer extends App {
 
   getStringStream(conn, topic)
     .map { message =>
-      message.copy(
-        key = message.value.toUpperCase,
+      message.produce(
+        topic = topic.toUpperCase,
+        key = message.key,
         value = message.value.toUpperCase
       )
     }
-    .saveToKafka(getProducer, topic.toUpperCase)
+    .saveToKafka(getProducer)
     .tumblingBuffer(1.second, 10)
     .foreach { messages =>
       if (messages.nonEmpty) {

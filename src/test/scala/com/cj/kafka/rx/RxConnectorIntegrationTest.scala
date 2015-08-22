@@ -73,7 +73,7 @@ class RxConnectorIntegrationTest extends FlatSpec with ShouldMatchers with Befor
   it should "deliver messages to a producer" in {
     val fakeStream = Observable.from(getFakeKafkaMessages(10) map { msg => getMessage(msg) })
     val producer = new MockProducer(true)
-    val savedMessages = fakeStream.saveToKafka(producer, "test-topic").toBlocking.toList
+    val savedMessages = fakeStream.map(_.produce("test-topic")).saveToKafka(producer).toBlocking.toList
     val history = producer.history
     savedMessages.size should be(10)
     history.size should be(10)
