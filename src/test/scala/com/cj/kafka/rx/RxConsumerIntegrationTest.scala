@@ -7,14 +7,16 @@ import org.apache.curator.retry.RetryUntilElapsed
 import org.apache.curator.test.TestingServer
 import org.apache.kafka.clients.producer.MockProducer
 import org.scalatest._
-import rx.lang.scala.Observable
+import rx.lang.scala.subjects.{PublishSubject, ReplaySubject}
+import rx.lang.scala.{Observer, Observable}
+import rx.lang.scala.observables.ConnectableObservable
 
 import collection.JavaConversions._
 
-class RxConnectorIntegrationTest extends FlatSpec with ShouldMatchers with BeforeAndAfter {
+class RxConsumerIntegrationTest extends FlatSpec with ShouldMatchers with BeforeAndAfter {
 
   "KafkaObservable" should "provide an observable stream" in {
-    val conn = new RxConnector("test", "test")
+    val conn = new RxConsumer("test", "test")
     val messages = getFakeKafkaMessages(2)
 
     val stream = conn.getObservableStream(messages)
@@ -25,20 +27,31 @@ class RxConnectorIntegrationTest extends FlatSpec with ShouldMatchers with Befor
     list.last.offset should be(1)
   }
 
-  it should "cache iterables for subsequent iteration" in {
+  it should "publish streams for multiple subscriptions" in {
     // kafka's iterable only supports single stateful iterator
-    // by having a cache we can circumvent this and get a 'view' of the kafka iterator
+    // by using `.publish` we can circumvent this and get a 'view' of the kafka iterator
     val server = new TestingServer()
     val client = CuratorFrameworkFactory.newClient(server.getConnectString, new RetryUntilElapsed(500,50))
     val zk: ZookeeperOffsetCommitter = new ZookeeperOffsetCommitter("test", client)
-    val conn = new RxConnector("test", "test", committer = zk)
+    val conn = new RxConsumer("test", "test", committer = zk)
     try {
       server.start()
       val messages = getFakeKafkaMessages(10)
-      val stream: Observable[Long] = conn.getObservableStream(messages, zk).map(_.offset).cache(10)
+      val stream: ConnectableObservable[Long] = conn.getObservableStream(messages, zk).map(_.offset).publish
 
-      val evens = stream.filter(x => (x % 2) == 0).toBlocking.toList
-      val odds = stream.filter(x => (x % 2) == 1).toBlocking.toList
+      val evenstream = stream.filter(x => (x % 2) == 0).take(5)
+      val oddstream = stream.filter(x => (x % 2) == 1).take(5)
+
+      // use subject to replay async behavior for tests
+      val evenSubject = ReplaySubject[Long]()
+      val oddSubject = ReplaySubject[Long]()
+      evenstream.subscribe(evenSubject)
+      oddstream.subscribe(oddSubject)
+
+      stream.connect
+
+      val evens = evenSubject.toBlocking.toList
+      val odds = oddSubject.toBlocking.toList
 
       evens.size should be(5)
       odds.size should be(5)
@@ -53,7 +66,7 @@ class RxConnectorIntegrationTest extends FlatSpec with ShouldMatchers with Befor
     val server = new TestingServer()
     val client = CuratorFrameworkFactory.newClient(server.getConnectString, new RetryUntilElapsed(500,50))
     val zk: ZookeeperOffsetCommitter = new ZookeeperOffsetCommitter("test", client)
-    val conn = new RxConnector("test", "test", committer = zk)
+    val conn = new RxConsumer("test", "test", committer = zk)
     val fakeMessages = getFakeKafkaMessages(10)
     val topicPartitions = fakeMessages map { message => message.topic -> message.partition}
     val expectedOffsets = (topicPartitions map { case (topic, partition) => topic -> partition -> (partition + 1) }).toMap
@@ -71,7 +84,7 @@ class RxConnectorIntegrationTest extends FlatSpec with ShouldMatchers with Befor
   }
 
   it should "deliver messages to a producer" in {
-    val fakeStream = Observable.from(getFakeKafkaMessages(10) map { msg => getMessage(msg) })
+    val fakeStream = Observable.from(getFakeKafkaMessages(10) map { msg => new Record(msg) })
     val producer = new MockProducer(true)
     val savedMessages = fakeStream.map(_.produce("test-topic")).saveToKafka(producer).toBlocking.toList
     val history = producer.history

@@ -1,8 +1,9 @@
 package com.cj.kafka.rx
 
+import kafka.message.MessageAndMetadata
 import org.apache.kafka.clients.producer.ProducerRecord
 
-case class Message[K, V](
+case class Record[K, V](
   key: K = null,
   value: V,
   topic: String,
@@ -11,13 +12,16 @@ case class Message[K, V](
   private[rx] override val commitfn: Commit = defaultCommit)
   extends Committable[V] {
 
+  private[rx] def this(msg: MessageAndMetadata[K, V], commit: Commit) = this(msg.key(), msg.message(), msg.topic, msg.partition, msg.offset, commit)
+  private[rx] def this(msg: MessageAndMetadata[K, V]) = this(msg, defaultCommit)
+
   val topicPartition = topic -> partition
 
   def commit(merge: OffsetMerge): OffsetMap = commitfn(merge)
 
   override def equals(other: Any) = {
     other match {
-      case message: Message[K, V] =>
+      case message: Record[K, V] =>
         message.topic == topic &&
         message.partition == partition &&
         message.offset == offset
@@ -25,16 +29,12 @@ case class Message[K, V](
     }
   }
 
-  def produce(topic: String): Committable[ProducerRecord[K, V]] = {
-    derive(new ProducerRecord[K, V](topic, partition, key, value))
-  }
-
-  def produce[v](topic: String, value: v): Committable[ProducerRecord[Null, v]] = {
-    produce[Null, v](topic, null, value)
-  }
-
   def produce[k, v](topic: String, key: k, value: v): Committable[ProducerRecord[k, v]] = {
     derive(new ProducerRecord[k, v](topic, key, value))
+  }
+
+  def produce(topic: String): Committable[ProducerRecord[K, V]] = {
+    derive(new ProducerRecord[K, V](topic, partition, key, value))
   }
 
   def produce[k, v](topic: String, partition: Int, key: k, value: v): Committable[ProducerRecord[k, v]] = {

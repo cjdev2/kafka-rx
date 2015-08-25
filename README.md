@@ -4,7 +4,7 @@ General Purpose [Kafka](https://kafka.apache.org) Client that Just Behaves
 
 #### Features
 
-- thin, reactive adapter around kafka's high level producer and consumer
+- thin, reactive adapter around kafka's producer and consumer
 - per message, fine grained commits semantics
 - offset management to keep track of consumer positions
 
@@ -15,14 +15,14 @@ kafka-rx provides a push alternative to kafka's pull-based stream
 To connect to your zookeeper cluster and process a stream:
 
 ```scala
-val connector = new RxConnector("zookeeper:2181", "consumer-group")
+val consumer = new RxConsumer("zookeeper:2181", "consumer-group")
 
-connector.getMessageStream("cool-topic-(x|y|z)")
+consumer.getRecordStream("cool-topic-(x|y|z)")
   .map(deserialize)
   .take(42 seconds)
   .foreach(println)
 
-connector.shutdown()
+consumer.shutdown()
 ```
 
 All of the standard [rx transforms](http://rxmarbles.com/) are available on the resulting stream.
@@ -36,7 +36,7 @@ tweetStream.map(parse)
   .groupBy(hashtag)
   .foreach { (tag, subStream) =>
     subStream.map(toProducerRecord)
-      .saveToKafka(kafkaProducer, s"tweets.$tag")
+      .saveToKafka(kafkaProducer)
       .foreach { savedMessage =>
         savedMessage.commit() // checkpoint position in the source stream
       }
@@ -64,7 +64,7 @@ In general you should aim for idempotent processing, where it is no different to
 
 ```scala
 val numStreams = numPartitions
-val streams = conn.getMessageStreams(topic, numStreams)
+val streams = consumer.getRecordStreams(topic, numStreams)
 ```
 
 #### Configuration
@@ -83,14 +83,14 @@ From maven:
 <dependency>
   <groupId>com.cj</groupId>
   <artifactId>kafka-rx_2.11</artifactId>
-  <version>0.2.0</version>
+  <version>0.3.0</version>
 </dependency>
 ```
 
 From sbt:
 
 ```scala
-libraryDependencies += "com.cj" % "kafka-rx" % "0.2.0"
+libraryDependencies += "com.cj" % "kafka-rx" % "0.3.0"
 ```
 
 #### Videos & Examples

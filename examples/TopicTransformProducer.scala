@@ -12,7 +12,7 @@ object TopicTransformProducer extends App {
   type Value = String
   type StringProducer = Producer[Key, Value]
 
-  val conn = new RxConnector("localhost:2181", "words-to-WORDS")
+  val conn = new RxConsumer("localhost:2181", "words-to-WORDS")
   val topic = "words"
 
   getStringStream(conn, topic)
@@ -32,12 +32,12 @@ object TopicTransformProducer extends App {
       }
   }
 
-  def formatMessage(result: Message[Key, Value]) = {
+  def formatMessage(result: Record[Key, Value]) = {
     println(s"Produced: [${result.topic}] - ${result.partition} -> ${result.offset} :: ${result.value}")
   }
 
-  def getStringStream(conn: RxConnector, topic: String) = {
-    conn.getMessageStream[Key, Value](topic, keyDecoder = new StringDecoder, valueDecoder = new StringDecoder)
+  def getStringStream(conn: RxConsumer, topic: String) = {
+    conn.getRecordStream[Key, Value](topic, keyDecoder = new StringDecoder, valueDecoder = new StringDecoder)
   }
 
   def getProducer: StringProducer = {

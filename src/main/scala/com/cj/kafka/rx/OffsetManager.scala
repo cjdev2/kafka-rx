@@ -8,7 +8,7 @@ class OffsetManager[K, V](offsetCommitter: OffsetCommitter) {
   private var currentOffsets = Map[TopicPartition, Long]()
   def getOffsets: OffsetMap = currentOffsets
 
-  def check(message: MessageAndMetadata[K, V]): Option[Message[K, V]] = {
+  def check(message: MessageAndMetadata[K, V]): Option[Record[K, V]] = {
     // updates internal offset state & determines whether the message is stale due to replay
     currentOffsets.get(message.topic -> message.partition) match {
       case None => manageMessage(message)
@@ -36,9 +36,9 @@ class OffsetManager[K, V](offsetCommitter: OffsetCommitter) {
     })
   }
 
-  private def manageMessage(msg:  MessageAndMetadata[K, V]): Some[Message[K, V]] = {
+  private def manageMessage(msg:  MessageAndMetadata[K, V]): Some[Record[K, V]] = {
     currentOffsets += msg.topic -> msg.partition -> msg.offset
-    Some(getMessage(msg, commitWith(currentOffsets)))
+    Some(new Record(msg, commitWith(currentOffsets)))
   }
 
 }

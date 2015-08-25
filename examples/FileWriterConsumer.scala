@@ -1,14 +1,14 @@
 import java.io.{FileOutputStream, File}
 
-import com.cj.kafka.rx.RxConnector
+import com.cj.kafka.rx.RxConsumer
 import scala.concurrent.duration._
 
 object FileWriterConsumer extends App {
 
-  val conn = new RxConnector("localhost:2181", "file-writer")
+  val conn = new RxConsumer("localhost:2181", "file-writer")
 
   // kafka rx job to write messages on all topics to disk
-  conn.getMessageStream(".*")
+  conn.getRecordStream(".*")
     // we can use groupBy to partition output by topic
     .groupBy(_.topicPartition)
     // for each topic / partition pair we get a new stream of events

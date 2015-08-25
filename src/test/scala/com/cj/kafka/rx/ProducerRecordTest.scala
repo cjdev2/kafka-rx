@@ -6,7 +6,7 @@ import rx.lang.scala.Observable
 
 import scala.collection.JavaConversions._
 
-class ProducerMessageTest extends FlatSpec with Matchers with BeforeAndAfter {
+class ProducerRecordTest extends FlatSpec with Matchers with BeforeAndAfter {
 
     "ProducerMessage" should "should allow items to be saved to a kafka stream" in {
 
@@ -21,7 +21,7 @@ class ProducerMessageTest extends FlatSpec with Matchers with BeforeAndAfter {
             "http://three/Include-me"
         )
 
-        val messages = urls.map(s => new Message(key = s.getBytes("UTF-8"), value = s.getBytes("UTF-8"), "", 0, 0))
+        val messages = urls.map(s => new Record(key = s.getBytes("UTF-8"), value = s.getBytes("UTF-8"), "", 0, 0))
         val stream = Observable.from(messages)
         val producer = new MockProducer()
 

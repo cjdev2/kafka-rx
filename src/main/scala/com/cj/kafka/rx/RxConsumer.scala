@@ -9,19 +9,19 @@ import org.apache.curator.framework.CuratorFrameworkFactory
 import org.apache.curator.retry.ExponentialBackoffRetry
 import rx.lang.scala.Observable
 
-class RxConnector(config: ConsumerConfig, committer: OffsetCommitter) {
+class RxConsumer(config: ConsumerConfig, committer: OffsetCommitter) {
 
   def this(zookeepers: String, group: String, autocommit: Boolean = false, startFromLatest: Boolean = false, committer: OffsetCommitter = null) =
-    this(RxConnector.getConsumerConfig(zookeepers, group, autocommit, startFromLatest), committer)
+    this(RxConsumer.getConsumerConfig(zookeepers, group, autocommit, startFromLatest), committer)
 
   private var kafkaConsumer: ConsumerConnector = null
   private var offsetCommitter: OffsetCommitter = committer
 
-  def getMessageStream[K, V](topic: String, keyDecoder: Decoder[K] = new DefaultDecoder, valueDecoder: Decoder[V] = new DefaultDecoder) = {
-    getMessageStreams(topic, 1, keyDecoder, valueDecoder)(0)
+  def getRecordStream[K, V](topic: String, keyDecoder: Decoder[K] = new DefaultDecoder, valueDecoder: Decoder[V] = new DefaultDecoder) = {
+    getRecordStreams(topic, 1, keyDecoder, valueDecoder)(0)
   }
 
-  def getMessageStreams[K, V](topic: String, numStreams: Int = 1, keyDecoder: Decoder[K] = new DefaultDecoder, valueDecoder: Decoder[V] = new DefaultDecoder) = {
+  def getRecordStreams[K, V](topic: String, numStreams: Int = 1, keyDecoder: Decoder[K] = new DefaultDecoder, valueDecoder: Decoder[V] = new DefaultDecoder) = {
     val kafkaStreams: Seq[KafkaStream[K, V]] = ensureKafkaConsumer().createMessageStreamsByFilter[K, V](
       new Whitelist(topic),
       numStreams = numStreams,
@@ -37,13 +37,13 @@ class RxConnector(config: ConsumerConfig, committer: OffsetCommitter) {
     }
   }
 
-  protected[rx] def getObservableStream[K, V](stream: Iterable[MessageAndMetadata[K, V]]): Observable[Message[K, V]] = {
+  protected[rx] def getObservableStream[K, V](stream: Iterable[MessageAndMetadata[K, V]]): Observable[Record[K, V]] = {
     Observable
       .from(stream)
-      .map(getMessage[K, V](_))
+      .map(new Record[K, V](_))
   }
 
-  protected[rx] def getObservableStream[K, V](stream: Iterable[MessageAndMetadata[K, V]], zk: OffsetCommitter): Observable[Message[K, V]] = {
+  protected[rx] def getObservableStream[K, V](stream: Iterable[MessageAndMetadata[K, V]], zk: OffsetCommitter): Observable[Record[K, V]] = {
     offsetCommitter.start()
     val manager = new OffsetManager[K, V](zk)
     Observable
@@ -62,7 +62,7 @@ class RxConnector(config: ConsumerConfig, committer: OffsetCommitter) {
 
   private def ensureOffsetCommitter(): OffsetCommitter = {
     if (offsetCommitter == null) {
-      offsetCommitter = RxConnector.getZKCommitter(config)
+      offsetCommitter = RxConsumer.getZKCommitter(config)
     }
     offsetCommitter
   }
@@ -81,7 +81,7 @@ class RxConnector(config: ConsumerConfig, committer: OffsetCommitter) {
   }
 }
 
-object RxConnector {
+object RxConsumer {
   private[rx] def getZKCommitter(config: ConsumerConfig) = {
     new ZookeeperOffsetCommitter(
       config.groupId,

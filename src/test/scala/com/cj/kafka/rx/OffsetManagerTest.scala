@@ -5,7 +5,7 @@ import org.scalatest.{FlatSpec, ShouldMatchers}
 
 class OffsetManagerTest extends FlatSpec with ShouldMatchers {
 
-  type RxMessage = Message[Array[Byte], Array[Byte]]
+  type RxMessage = Record[Array[Byte], Array[Byte]]
   type KafkaMessage = MessageAndMetadata[Array[Byte], Array[Byte]]
 
   object FakeOffsetCommitter extends OffsetCommitter {
@@ -28,7 +28,7 @@ class OffsetManagerTest extends FlatSpec with ShouldMatchers {
   it should "record offsets for kafka messages" in {
     // given
     val offsets = new OffsetManager[Array[Byte], Array[Byte]](FakeOffsetCommitter)
-    val message = Message(key="test message".getBytes, value="test message".getBytes, topic="test-topic", partition=0, offset=1L)
+    val message = Record(key="test message".getBytes, value="test message".getBytes, topic="test-topic", partition=0, offset=1L)
 
     // when
     val checkedMessage = offsets.check(kafkaRawMessage(message))
@@ -41,7 +41,7 @@ class OffsetManagerTest extends FlatSpec with ShouldMatchers {
   it should "not record the same message twice" in {
     // given
     val manager = new OffsetManager[Array[Byte], Array[Byte]](FakeOffsetCommitter)
-    val message: RxMessage = Message(value="test message".getBytes, topic="test-topic", partition=0, offset=0L)
+    val message: RxMessage = Record(value="test message".getBytes, topic="test-topic", partition=0, offset=0L)
 
     // when
     val firstAttempt = manager.check(kafkaRawMessage(message))
@@ -55,8 +55,8 @@ class OffsetManagerTest extends FlatSpec with ShouldMatchers {
   it should "not update offsets for old messages" in {
     // given
     val manager = new OffsetManager[Array[Byte], Array[Byte]](FakeOffsetCommitter)
-    val oldMessage: RxMessage = Message(value="test message".getBytes, topic="test-topic", partition=0, offset=0L)
-    val newMessage: RxMessage = Message(value="test message".getBytes, topic="test-topic", partition=0, offset=1L)
+    val oldMessage: RxMessage = Record(value="test message".getBytes, topic="test-topic", partition=0, offset=0L)
+    val newMessage: RxMessage = Record(value="test message".getBytes, topic="test-topic", partition=0, offset=1L)
 
     // when
     val newAttempt = manager.check(kafkaRawMessage(newMessage))
@@ -71,8 +71,8 @@ class OffsetManagerTest extends FlatSpec with ShouldMatchers {
   it should "keep track across multiple partitions" in {
     // given
     val offsets = new OffsetManager[Array[Byte], Array[Byte]](FakeOffsetCommitter)
-    val messageA: RxMessage = Message(value="test message".getBytes, topic="test-topic", partition=0, offset=0L)
-    val messageB: RxMessage = Message(value="test message".getBytes, topic="test-topic", partition=1, offset=0L)
+    val messageA: RxMessage = Record(value="test message".getBytes, topic="test-topic", partition=0, offset=0L)
+    val messageB: RxMessage = Record(value="test message".getBytes, topic="test-topic", partition=1, offset=0L)
 
     // when
     offsets.check(kafkaRawMessage(messageA))
@@ -85,8 +85,8 @@ class OffsetManagerTest extends FlatSpec with ShouldMatchers {
   it should "know which partitions it owns" in {
     // given
     val offsets = new OffsetManager[Array[Byte], Array[Byte]](FakeOffsetCommitter)
-    val messageA: RxMessage = Message(value="test message".getBytes, topic="test-topic", partition=0, offset=0L)
-    val messageB: RxMessage = Message(value="test message".getBytes, topic="test-topic", partition=1, offset=0L)
+    val messageA: RxMessage = Record(value="test message".getBytes, topic="test-topic", partition=0, offset=0L)
+    val messageB: RxMessage = Record(value="test message".getBytes, topic="test-topic", partition=1, offset=0L)
     offsets.check(kafkaRawMessage(messageA))
     offsets.check(kafkaRawMessage(messageB))
 
@@ -113,7 +113,7 @@ class OffsetManagerTest extends FlatSpec with ShouldMatchers {
       }
     }
 
-    val message: RxMessage = Message(value="test".getBytes, topic="test-topic", partition=0, offset=0L, commitfn=failingMerge)
+    val message: RxMessage = Record(value="test".getBytes, topic="test-topic", partition=0, offset=0L, commitfn=failingMerge)
     val manager = new OffsetManager[Array[Byte], Array[Byte]](offsetCommitter=HappyCommitter)
 
     val checkedMessage = manager.check(kafkaRawMessage(message))

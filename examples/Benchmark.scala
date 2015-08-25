@@ -27,7 +27,7 @@ object PipeStream extends App {
   val consumer = util.getConsumer
   val producer = util.getProducer
 
-  val streams = consumer.getMessageStreams[Array[Byte], Array[Byte]](util.input, util.concurrency)
+  val streams = consumer.getRecordStreams[Array[Byte], Array[Byte]](util.input, util.concurrency)
 
   val subject = PublishSubject[(Int, Long)]()
   val count = new AtomicLong()
@@ -70,11 +70,11 @@ object util {
     new KafkaProducer[Array[Byte], Array[Byte]](props)
   }
 
-  def getConsumer: RxConnector = {
-    new RxConnector(zookeeper, group, autocommit = true, startFromLatest = false)
+  def getConsumer: RxConsumer = {
+    new RxConsumer(zookeeper, group, autocommit = true, startFromLatest = false)
   }
 
-  def countStream(stream: Observable[Message[_, _]], time: Duration = 1.second): Observable[Long] = {
+  def countStream(stream: Observable[Record[_, _]], time: Duration = 1.second): Observable[Long] = {
     for {
       slice <- stream.tumbling(time)
       count <- slice.countLong
