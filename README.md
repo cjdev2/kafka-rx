@@ -5,10 +5,10 @@ General Purpose [Kafka](https://kafka.apache.org) Client that Just Behaves
 #### Features
 
 - thin, reactive adapter around kafka's producer and consumer
-- per message, fine grained commits semantics
+- per record, fine grained commits semantics
 - offset management to keep track of consumer positions
 
-#### Consuming messages:
+#### Consuming records:
 
 kafka-rx provides a push alternative to kafka's pull-based stream
 
@@ -27,7 +27,7 @@ consumer.shutdown()
 
 All of the standard [rx transforms](http://rxmarbles.com/) are available on the resulting stream.
 
-#### Producing messages
+#### Producing records
 
 kafka-rx can also be used to produce kafka streams
 
@@ -37,19 +37,19 @@ tweetStream.map(parse)
   .foreach { (tag, subStream) =>
     subStream.map(toProducerRecord)
       .saveToKafka(kafkaProducer)
-      .foreach { savedMessage =>
-        savedMessage.commit() // checkpoint position in the source stream
+      .foreach { savedRecord =>
+        savedRecord.commit() // checkpoint position in the source stream
       }
   }
 ```
 
 Check out the [words-to-WORDS](examples/TopicTransformProducer.scala) producer or the [twitter-stream](examples/twitter-stream) demo for a full working example.
 
-#### Reliable Message Processing
+#### Reliable Record Processing
 
-kafka-rx was built with reliable message processing in mind
+kafka-rx was built with reliable record processing in mind
 
-To support this, every kafka-rx message has a `.commit()` method which optionally takes a user provided merge function, giving the program an opportunity to reconcile offsets with zookeeper and manage delivery guarantees.
+To support this, every kafka-rx record has a `.commit()` method which optionally takes a user provided merge function, giving the program an opportunity to reconcile offsets with zookeeper and manage delivery guarantees.
 
 ```scala
 stream.buffer(23).foreach { bucket =>
@@ -58,9 +58,9 @@ stream.buffer(23).foreach { bucket =>
 }
 ```
 
-If you can afford possible gaps in message processing you can also use kafka's automatic offset commit behavior, but you are encouraged to manage commits yourself.
+If you can afford possible gaps in record processing you can also use kafka's automatic offset commit behavior, but you are encouraged to manage commits yourself.
 
-In general you should aim for idempotent processing, where it is no different to process a message once or many times. In addition, remember that messages are delivered across different topic partitions in a non-deterministic order. If this is important you are encouraged to process each topic partition as an individual stream to ensure there is no interleaving.
+In general you should aim for idempotent processing, where it is no different to process a record once or many times. In addition, remember that records are delivered across different topic partitions in a non-deterministic order. If this is important you are encouraged to process each topic partition as an individual stream to ensure there is no interleaving.
 
 ```scala
 val numStreams = numPartitions

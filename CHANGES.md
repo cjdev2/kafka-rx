@@ -3,6 +3,8 @@
 - Renamed `RxConnector` to `RxConsumer`
 - Renamed `Message` to `Record`
 - Extracted committer into trait
+- Introduced `Committable[T]` for derived values
+- `.produce` now returns kafka ProducerRecords
 
 # 0.2.0
 
