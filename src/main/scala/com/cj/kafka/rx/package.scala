@@ -2,7 +2,7 @@ package com.cj.kafka
 
 package object rx {
 
-  import _root_.rx.lang.scala.subjects.AsyncSubject
+  import _root_.rx.lang.scala.subjects.PublishSubject
   import _root_.rx.lang.scala.Observable
   import kafka.message.MessageAndMetadata
   import org.apache.kafka.clients.producer.{Producer, ProducerRecord, RecordMetadata, Callback}
@@ -35,7 +35,7 @@ package object rx {
     producer: Producer[K, V],
     record: ProducerRecord[K, V],
     commit: Commit = defaultCommit): Observable[Message[K, V]] = {
-    val subject = AsyncSubject[Message[K, V]]()
+    val subject = PublishSubject[Message[K, V]]()
     producer.send(record, new Callback {
       def onCompletion(metadata: RecordMetadata, exception: Exception): Unit = {
         if (exception != null) {

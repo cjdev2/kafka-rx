@@ -1,15 +1,15 @@
 import java.util.Properties
+import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicLong
 
 import org.apache.kafka.clients.producer.{Producer, ProducerRecord, ProducerConfig, KafkaProducer}
-
-import scala.concurrent.ExecutionContext.Implicits.global
+import rx.lang.scala.subjects.PublishSubject
 
 import com.cj.kafka.rx._
 import org.apache.kafka.common.serialization.ByteArraySerializer
 import rx.lang.scala.Observable
 
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ExecutionContext, Await, Future}
 import scala.util.Random
 
 import scala.concurrent.duration._
@@ -23,19 +23,32 @@ object InputStream extends App {
 }
 
 object PipeStream extends App {
+
   val consumer = util.getConsumer
+  val producer = util.getProducer
+
   val streams = consumer.getMessageStreams[Array[Byte], Array[Byte]](util.input, util.concurrency)
 
-  val producer = util.getProducer
+  val subject = PublishSubject[(Int, Long)]()
   val count = new AtomicLong()
-  val futures = for (stream <- streams) yield Future {
-    val id = count.incrementAndGet()
+  implicit val ec = util.getExecutionContext
+  val counters = for (stream <- streams) yield Future {
+    val id = count.incrementAndGet().toInt
     val recordStream = stream map { x => new ProducerRecord(util.output, x.key, x.value) }
     val saved = recordStream.saveToKafka(producer)
-    util.countStream(saved) foreach { x => println(s"Thread $id: $x") }
+    util.countStream(saved).subscribe(msg => { subject.onNext(id -> msg) })
   }
 
-  Await.result(Future.sequence(futures), Duration.Inf)
+  def sum = Future {
+    val seed: Map[Int, Long] = Map()
+    subject.scan(seed) { (accum, curr) =>
+      accum + curr
+    } map { counts =>
+      counts.values.sum
+    } sample(1 second) subscribe(msg => println(msg))
+  }
+
+  Await.result(Future.sequence(counters :+ sum), Duration.Inf)
 }
 
 
@@ -75,6 +88,11 @@ object util {
   def bigStream = Observable.from(new Iterable[BigInt] {
     def iterator: Iterator[BigInt] = bigIterator()
   })
+
+  def getExecutionContext: ExecutionContext = {
+    val context = Executors.newFixedThreadPool(util.concurrency + 2)
+    ExecutionContext.fromExecutor(context)
+  }
 
   val random = new Random()
   def randomBytes(amount: Int) = {
