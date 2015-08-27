@@ -1,5 +1,7 @@
 # kafka-rx [![Build Status](https://travis-ci.org/cjdev/kafka-rx.svg)](https://travis-ci.org/cjdev/kafka-rx) [![Maven Central](https://img.shields.io/maven-central/v/com.cj/kafka-rx_2.11.svg)](http://search.maven.org/#search%7Cgav%7C1%7Cg%3A%22com.cj%22%20AND%20a%3A%22kafka-rx_2.11%22)
 
+[![Join the chat at https://gitter.im/cjdev/kafka-rx](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/cjdev/kafka-rx?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 General Purpose [Kafka](https://kafka.apache.org) Client that Just Behaves
 
 #### Features
