@@ -2,7 +2,6 @@ import org.apache.kafka.clients.producer.ProducerRecord
 import rx.lang.scala.Observable
 import rx.lang.scala.subjects.PublishSubject
 import twitter4j._
-import com.cj.kafka.rx.ProducerMessage
 
 object TwitterUtils {
 
