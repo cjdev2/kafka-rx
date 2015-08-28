@@ -33,15 +33,15 @@ object TwitterStream {
       subStream
         .map(toProducerRecord(topic, _))
         .saveToKafka(kafkaProducer)
-    } map { message: Message[String, String] =>
-      formatKafkaMessage(message)
+    } map { record: Record[String, String] =>
+      formatKafkaRecord(record)
     }
   }
 
   def getConsumerStream(topic: String): Future[Observable[String]] = Future {
     val topicWildcard = topic + ".*"
-    getStringStream(ZOOKEEPER, CONSUMER_GROUP, topicWildcard) map { message: Message[String, String] =>
-      TwitterObjectFactory.createStatus(message.value)
+    getStringStream(ZOOKEEPER, CONSUMER_GROUP, topicWildcard) map { record: Record[String, String] =>
+      TwitterObjectFactory.createStatus(record.value)
     } map { tweet: Status =>
       formatTwitterStatus(tweet)
     }

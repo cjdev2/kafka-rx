@@ -1,8 +1,8 @@
 import java.util.Properties
 
-import com.cj.kafka.rx.{RxConnector, Message}
+import com.cj.kafka.rx.{Record, RxConsumer}
 import kafka.serializer.StringDecoder
-import org.apache.kafka.clients.producer.{Producer, KafkaProducer}
+import org.apache.kafka.clients.producer.{KafkaProducer, Producer}
 import org.apache.kafka.common.serialization.StringSerializer
 import rx.lang.scala.Observable
 
@@ -16,13 +16,13 @@ object KafkaUtils {
   type Key = String
   type Value = String
 
-  def getStringStream(zookeepers: String, group: String, kafkaTopic: String): Observable[Message[Key, Value]] = {
-    new RxConnector(
+  def getStringStream(zookeepers: String, group: String, kafkaTopic: String): Observable[Record[String, String]] = {
+    new RxConsumer(
       zookeepers = zookeepers,
       group = group,
       autocommit = true,
       startFromLatest = true
-    ).getMessageStream(
+    ).getRecordStream(
       topic = kafkaTopic,
       keyDecoder = new StringDecoder,
       valueDecoder = new StringDecoder
@@ -38,8 +38,8 @@ object KafkaUtils {
     new KafkaProducer[String, String](props)
   }
 
-  def formatKafkaMessage(message: Message[Key, Value]) = {
-    s"[kafka] ${message.topic} => ${message.partition} => ${message.offset}"
+  def formatKafkaRecord(record: Record[Key, Value]) = {
+    s"[kafka] ${record.topic} => ${record.partition} => ${record.offset}"
   }
 
 }
