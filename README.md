@@ -65,6 +65,7 @@ In general you should aim for idempotent processing, where it is no different to
 ```scala
 val numStreams = numPartitions
 val streams = consumer.getRecordStreams(topic, numStreams)
+for (stream <- streams) yield Future { process(stream) }
 ```
 
 #### Configuration
