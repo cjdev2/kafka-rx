@@ -1,6 +1,6 @@
 package com.cj.kafka.rx
 
-import org.apache.kafka.clients.producer.{RecordMetadata, MockProducer}
+import org.apache.kafka.clients.producer.{ProducerRecord, RecordMetadata, MockProducer}
 import org.scalatest.{Matchers, BeforeAndAfter, FlatSpec}
 import rx.lang.scala.Observable
 
@@ -45,4 +45,21 @@ class ProducerRecordTest extends FlatSpec with Matchers with BeforeAndAfter {
             new String(producerRecord.value(), "UTF-8")
         } shouldBe urls.filter(pred)
     }
+
+    it should "maintain commit context when used with kafka producers" in {
+        var commitWasCalled = false
+        val stream: Observable[Committable[ProducerRecord[Array[Byte], Array[Byte]]]] = Observable.just(
+            new Record("key".getBytes, "val".getBytes, "topic", 0, 0, commitfn = { _ =>
+                commitWasCalled = true; Map()
+            })
+        ) map { x =>
+            x.produce("lol")
+        }
+        val fakeProducer = new MockProducer()
+        val result = stream.saveToKafka(fakeProducer).toBlocking.toList
+
+        result.last.commit()
+        commitWasCalled should be (true)
+    }
+
 }

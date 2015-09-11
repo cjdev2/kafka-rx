@@ -10,6 +10,7 @@ trait Committable[V] {
     new Committable[R] {
       def value: R = newValue
       def commit(offsetMerge: OffsetMerge): OffsetMap = origin.commit(offsetMerge)
+      override def commitfn = origin.commitfn
       override def commit(): OffsetMap = origin.commit()
     }
   }
