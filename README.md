@@ -91,7 +91,7 @@ From maven:
 From sbt:
 
 ```scala
-libraryDependencies += "com.cj" % "kafka-rx" % "0.3.1"
+libraryDependencies += "com.cj" %% "kafka-rx" % "0.3.1"
 ```
 
 #### Videos & Examples
