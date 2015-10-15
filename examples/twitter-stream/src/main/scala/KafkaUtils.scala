@@ -17,6 +17,7 @@ object KafkaUtils {
   val KAFKA          = props.getProperty("kafka.brokers")
   val ZOOKEEPER      = props.getProperty("kafka.zkQuorum")
   val CONSUMER_GROUP = props.getProperty("kafka.twitter_consumer_groupid")
+  val KAFKA_TWITTER_TOPIC_PREFIX = props.getProperty("kafka.twitter_topic_prefix")
 
   type Key = String
   type Value = String

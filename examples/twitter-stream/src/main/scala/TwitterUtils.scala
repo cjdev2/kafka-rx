@@ -21,7 +21,6 @@ object TwitterUtils {
   val ACCESS_TOKEN = props.getProperty("twitter.access_token")
   val ACCESS_SECRET = props.getProperty("twitter.access_secret")
 
-
   def getTwitter(consumerKey: String, consumerSecret: String, accessToken: String, accessSecret: String): TwitterStream = {
     val config = new twitter4j.conf.ConfigurationBuilder()
       .setJSONStoreEnabled(true)

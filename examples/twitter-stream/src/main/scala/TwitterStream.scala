@@ -14,8 +14,8 @@ object TwitterStream {
   def main(args: Array[String]) = {
     await[Observable[String]] {
       for {
-        producer <- getProducerStream("tweets", args)
-        consumer <- getConsumerStream("tweets")
+        producer <- getProducerStream(KAFKA_TWITTER_TOPIC_PREFIX, args)
+        consumer <- getConsumerStream(KAFKA_TWITTER_TOPIC_PREFIX)
       } yield producer.merge(consumer)
     } foreach (
       onNext = { msg => println(msg) },
