@@ -1,3 +1,6 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 import org.apache.kafka.clients.producer.ProducerRecord
 import rx.lang.scala.Observable
 import rx.lang.scala.subjects.PublishSubject
@@ -8,10 +11,16 @@ object TwitterUtils {
   // twitter app credentials:
   // https://apps.twitter.com/
 
-  val CONSUMER_KEY = "CONSUMER_KEY"
-  val CONSUMER_SECRET = "CONSUMER_SECRET"
-  val ACCESS_TOKEN = "ACCESS_TOKEN"
-  val ACCESS_SECRET = "ACCESS_SECRET"
+  val props = new Properties()
+  val input = new FileInputStream("src/main/resources/twitter.properties")
+  props.load(input)
+  input.close()
+
+  val CONSUMER_KEY = props.getProperty("twitter.consumer_key")
+  val CONSUMER_SECRET = props.getProperty("twitter.consumer_secret")
+  val ACCESS_TOKEN = props.getProperty("twitter.access_token")
+  val ACCESS_SECRET = props.getProperty("twitter.access_secret")
+
 
   def getTwitter(consumerKey: String, consumerSecret: String, accessToken: String, accessSecret: String): TwitterStream = {
     val config = new twitter4j.conf.ConfigurationBuilder()
