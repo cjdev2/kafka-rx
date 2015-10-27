@@ -1,3 +1,4 @@
+import java.io.FileInputStream
 import java.util.Properties
 
 import com.cj.kafka.rx.{Record, RxConsumer}
@@ -8,10 +9,15 @@ import rx.lang.scala.Observable
 
 object KafkaUtils {
 
-  val KAFKA = "localhost:9091"
-  val ZOOKEEPER = "localhost:2181"
+  val props = new Properties()
+  val input = new FileInputStream("src/main/resources/kafka.properties")
+  props.load(input)
+  input.close()
 
-  val CONSUMER_GROUP = "twitter-consumer"
+  val KAFKA          = props.getProperty("kafka.brokers")
+  val ZOOKEEPER      = props.getProperty("kafka.zkQuorum")
+  val CONSUMER_GROUP = props.getProperty("kafka.twitter_consumer_groupid")
+  val KAFKA_TWITTER_TOPIC_PREFIX = props.getProperty("kafka.twitter_topic_prefix")
 
   type Key = String
   type Value = String
