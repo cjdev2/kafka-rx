@@ -1,7 +1,8 @@
 package com.cj.kafka.rx
 
-import org.apache.kafka.clients.producer.{ProducerRecord, RecordMetadata, MockProducer}
-import org.scalatest.{Matchers, BeforeAndAfter, FlatSpec}
+import org.apache.kafka.clients.producer.{MockProducer, ProducerRecord}
+import org.apache.kafka.common.serialization.ByteArraySerializer
+import org.scalatest.{BeforeAndAfter, FlatSpec, Matchers}
 import rx.lang.scala.Observable
 
 import scala.collection.JavaConversions._
@@ -23,7 +24,7 @@ class ProducerRecordTest extends FlatSpec with Matchers with BeforeAndAfter {
 
         val messages = urls.map(s => new Record(key = s.getBytes("UTF-8"), value = s.getBytes("UTF-8"), "", 0, 0))
         val stream = Observable.from(messages)
-        val producer = new MockProducer()
+        val producer = new MockProducer(true, new ByteArraySerializer(), new ByteArraySerializer())
 
         def pred(s: String) = s.toLowerCase.contains("/include-me")
 
@@ -55,11 +56,10 @@ class ProducerRecordTest extends FlatSpec with Matchers with BeforeAndAfter {
         ) map { x =>
             x.produce("lol")
         }
-        val fakeProducer = new MockProducer()
+        val fakeProducer = new MockProducer(true, new ByteArraySerializer(), new ByteArraySerializer())
         val result = stream.saveToKafka(fakeProducer).toBlocking.toList
 
         result.last.commit()
         commitWasCalled should be (true)
     }
-
 }

@@ -6,6 +6,7 @@ import org.apache.curator.framework.CuratorFrameworkFactory
 import org.apache.curator.retry.RetryUntilElapsed
 import org.apache.curator.test.TestingServer
 import org.apache.kafka.clients.producer.MockProducer
+import org.apache.kafka.common.serialization.ByteArraySerializer
 import org.scalatest._
 import rx.lang.scala.subjects.{PublishSubject, ReplaySubject}
 import rx.lang.scala.{Observer, Observable}
@@ -85,7 +86,7 @@ class RxConsumerIntegrationTest extends FlatSpec with ShouldMatchers with Before
 
   it should "deliver messages to a producer" in {
     val fakeStream = Observable.from(getFakeKafkaMessages(10) map { msg => new Record(msg) })
-    val producer = new MockProducer(true)
+    val producer = new MockProducer(true, new ByteArraySerializer(), new ByteArraySerializer())
     val savedMessages = fakeStream.map(_.produce("test-topic")).saveToKafka(producer).toBlocking.toList
     val history = producer.history
     savedMessages.size should be(10)
