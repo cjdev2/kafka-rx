@@ -2,7 +2,7 @@ package com.cj.kafka.rx
 
 import org.scalatest._
 
-class CommittableTest extends FlatSpec with ShouldMatchers {
+class CommittableTest extends FlatSpec with Matchers {
 
   "Committable" should "pass along a commit context to derivatives" in {
     var passing = false

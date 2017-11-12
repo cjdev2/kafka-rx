@@ -1,9 +1,9 @@
 package com.cj.kafka.rx
 
 import kafka.message.MessageAndMetadata
-import org.scalatest.{FlatSpec, ShouldMatchers}
+import org.scalatest.{FlatSpec, Matchers}
 
-class OffsetManagerTest extends FlatSpec with ShouldMatchers {
+class OffsetManagerTest extends FlatSpec with Matchers {
 
   type RxMessage = Record[Array[Byte], Array[Byte]]
   type KafkaMessage = MessageAndMetadata[Array[Byte], Array[Byte]]
