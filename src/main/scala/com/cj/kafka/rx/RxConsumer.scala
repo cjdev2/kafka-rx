@@ -17,11 +17,11 @@ class RxConsumer(config: ConsumerConfig, committer: OffsetCommitter) {
   private var kafkaConsumer: ConsumerConnector = null
   private var offsetCommitter: OffsetCommitter = committer
 
-  def getRecordStream[K, V](topic: String, keyDecoder: Decoder[K] = new DefaultDecoder, valueDecoder: Decoder[V] = new DefaultDecoder) = {
+  def getRecordStream[K, V](topic: String, keyDecoder: Decoder[K] = new DefaultDecoder[K], valueDecoder: Decoder[V] = new DefaultDecoder) = {
     getRecordStreams(topic, 1, keyDecoder, valueDecoder)(0)
   }
 
-  def getRecordStreams[K, V](topic: String, numStreams: Int = 1, keyDecoder: Decoder[K] = new DefaultDecoder, valueDecoder: Decoder[V] = new DefaultDecoder) = {
+  def getRecordStreams[K, V](topic: String, numStreams: Int = 1, keyDecoder: Decoder[K] = new DefaultDecoder[K], valueDecoder: Decoder[V] = new DefaultDecoder[K]) = {
     val kafkaStreams: Seq[KafkaStream[K, V]] = ensureKafkaConsumer().createMessageStreamsByFilter[K, V](
       new Whitelist(topic),
       numStreams = numStreams,

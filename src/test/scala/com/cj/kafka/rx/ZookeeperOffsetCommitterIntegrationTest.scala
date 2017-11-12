@@ -8,9 +8,9 @@ import org.apache.curator.utils.EnsurePath
 
 import scala.concurrent.duration._
 
-import org.scalatest.{BeforeAndAfter, FlatSpec, ShouldMatchers}
+import org.scalatest.{BeforeAndAfter, FlatSpec, Matchers}
 
-class ZookeeperOffsetCommitterIntegrationTest extends FlatSpec with ShouldMatchers with BeforeAndAfter {
+class ZookeeperOffsetCommitterIntegrationTest extends FlatSpec with Matchers with BeforeAndAfter {
 
   var server: TestingServer = _
   var client: CuratorFramework = _

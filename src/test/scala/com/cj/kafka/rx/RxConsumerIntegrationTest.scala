@@ -6,14 +6,15 @@ import org.apache.curator.framework.CuratorFrameworkFactory
 import org.apache.curator.retry.RetryUntilElapsed
 import org.apache.curator.test.TestingServer
 import org.apache.kafka.clients.producer.MockProducer
+import org.apache.kafka.common.serialization.ByteArraySerializer
 import org.scalatest._
 import rx.lang.scala.subjects.{PublishSubject, ReplaySubject}
-import rx.lang.scala.{Observer, Observable}
+import rx.lang.scala.{Observable, Observer}
 import rx.lang.scala.observables.ConnectableObservable
 
 import collection.JavaConversions._
 
-class RxConsumerIntegrationTest extends FlatSpec with ShouldMatchers with BeforeAndAfter {
+class RxConsumerIntegrationTest extends FlatSpec with Matchers with BeforeAndAfter {
 
   "KafkaObservable" should "provide an observable stream" in {
     val conn = new RxConsumer("test", "test")
@@ -85,7 +86,7 @@ class RxConsumerIntegrationTest extends FlatSpec with ShouldMatchers with Before
 
   it should "deliver messages to a producer" in {
     val fakeStream = Observable.from(getFakeKafkaMessages(10) map { msg => new Record(msg) })
-    val producer = new MockProducer(true)
+    val producer = new MockProducer(true, new ByteArraySerializer(), new ByteArraySerializer())
     val savedMessages = fakeStream.map(_.produce("test-topic")).saveToKafka(producer).toBlocking.toList
     val history = producer.history
     savedMessages.size should be(10)
